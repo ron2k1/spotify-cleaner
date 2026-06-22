@@ -75,6 +75,10 @@ def apply(
             f"\nWarning: could not write backup ({type(exc).__name__}); "
             "proceeding without a restore manifest."
         )
+    # Record whether the safety net was actually written, so callers that don't
+    # see stdout (the web apply job) can warn the user that this delete has no
+    # restore manifest. The CLI shows the print above; the SSE client gets this.
+    summary["backup_written"] = manifest is not None
 
     try:
         if remove_from_playlists:

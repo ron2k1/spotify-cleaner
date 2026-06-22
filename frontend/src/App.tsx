@@ -168,6 +168,13 @@ export default function App() {
         summary.playlists_touched === 1 ? "" : "s"
       }.`,
     );
+    // The removal succeeded but its safety net didn't: say so plainly, because
+    // Spotify offers no undo and there's now no restore manifest to fall back on.
+    if (summary.backup_written === false) {
+      toast.warning(
+        "No restore manifest could be written, so this removal can't be undone from a backup.",
+      );
+    }
   }, []);
 
   const onApplyError = useCallback((d: ErrorEvent) => {

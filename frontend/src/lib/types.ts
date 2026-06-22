@@ -109,6 +109,9 @@ export interface ApplyDoneEvent {
   unliked: number;
   removed_from_playlists: number;
   playlists_touched: number;
+  /** False when the pre-delete restore manifest could not be written (e.g. an
+   *  unwritable backups/ dir). Absent when nothing was removed. */
+  backup_written?: boolean;
 }
 
 export interface ErrorEvent {
