@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from .library import Library
-from .models import PlayStats, ScoredTrack
+from .models import PlayStats, ScoredTrack, Track
 
 _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
@@ -45,7 +45,7 @@ def plan(
         if reason:
             candidates.append(ScoredTrack(track=t, stats=st, reason=reason))
 
-    candidates.sort(key=lambda c: _sort_key(c.stats))
+    candidates.sort(key=lambda c: _sort_key(c.stats, c.track))
     return candidates
 
 
@@ -69,12 +69,22 @@ def _why(
     return ""
 
 
-def _sort_key(st: PlayStats):
-    """Least-listened first: low count, oldest last-play, worst rank."""
+def _sort_key(st: PlayStats, track: Track):
+    """Least-listened first, with oldest-added as the final tie-breaker.
+
+    The first three terms order by listening evidence (low count, oldest
+    last-play, worst rank). ``added_at`` ascending breaks ties: in rank /
+    toptracks mode every candidate shares the same first three terms (no
+    counts, no last-play dates, no rank), so this term alone decides the order
+    and surfaces the songs you've sat on longest — not the ones you just saved.
+    A missing date sorts last via the ``"9999"`` sentinel (Spotify's ISO 8601
+    timestamps sort chronologically under a plain lexical compare).
+    """
     # Unknown count sorts LAST (big sentinel), so a confirmed 0-play track
     # outranks a "we don't know" track. The opposite would push uncertain
     # tracks to the top of the deletion list.
     count = st.play_count if st.play_count is not None else 10**9
     last = st.last_played or _EPOCH
     rank = st.rank if st.rank is not None else 10**9
-    return (count, last, -rank)
+    added = track.added_at or "9999"
+    return (count, last, -rank, added)

@@ -84,6 +84,48 @@ def test_rank_mode_flags_not_in_top():
     assert [c.track.track_id for c in cands] == ["b"]
 
 
+def test_rank_mode_orders_oldest_added_first():
+    # Spotify returns saved tracks newest-first, so that is the input order.
+    # In rank mode none of these have a play count, last-play date, or rank,
+    # so the first three sort terms tie for all of them. Without the added_at
+    # tie-break a stable sort would leave them newest-first (the bug: a song
+    # you just saved sitting atop the "least listened" list). They must come
+    # back oldest-added first instead.
+    def _at(tid: str, added_at: str) -> Track:
+        return Track(tid, f"spotify:track:{tid}", tid, ("B",),
+                     is_liked=True, added_at=added_at)
+
+    lib = _lib([
+        _at("new", "2024-06-01T00:00:00Z"),
+        _at("mid", "2022-01-01T00:00:00Z"),
+        _at("old", "2019-03-15T00:00:00Z"),
+    ])
+    stats = {tid: PlayStats("toptracks", in_top=False) for tid in ("new", "mid", "old")}
+    cands = plan(lib, stats, "rank")
+    assert [c.track.track_id for c in cands] == ["old", "mid", "new"]
+
+
+def test_added_at_only_breaks_ties_in_count_mode():
+    # When real play counts differ they must still dominate; added_at only
+    # decides between tracks with identical listening evidence. Here two tracks
+    # have 0 plays, so the older-added one comes first; a 1-play track sorts
+    # last despite being the oldest, because count dominates the tie-break.
+    older = Track("o", "spotify:track:o", "o", ("B",), is_liked=True,
+                  added_at="2020-01-01T00:00:00Z")
+    newer = Track("n", "spotify:track:n", "n", ("B",), is_liked=True,
+                  added_at="2024-01-01T00:00:00Z")
+    busy = Track("b", "spotify:track:b", "b", ("B",), is_liked=True,
+                 added_at="2018-01-01T00:00:00Z")  # oldest, but played more
+    lib = _lib([newer, older, busy])
+    stats = {
+        "n": PlayStats("gdpr", play_count=0),
+        "o": PlayStats("gdpr", play_count=0),
+        "b": PlayStats("gdpr", play_count=1),
+    }
+    cands = plan(lib, stats, "count", min_plays=2)
+    assert [c.track.track_id for c in cands] == ["o", "n", "b"]
+
+
 # --- GDPR parser ------------------------------------------------------------
 
 

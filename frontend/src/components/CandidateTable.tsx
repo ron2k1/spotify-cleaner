@@ -144,6 +144,20 @@ export function CandidateTable({
         ),
       },
       {
+        id: "added",
+        header: "Added",
+        size: 116,
+        // Missing dates sort last (+Inf) so the default ascending order shows
+        // the songs you've kept longest first — matching the planner's order.
+        accessorFn: (r) =>
+          r.added_at ? Date.parse(r.added_at) : Number.POSITIVE_INFINITY,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">
+            {formatDate(row.original.added_at)}
+          </span>
+        ),
+      },
+      {
         id: "playlists",
         header: "Playlists",
         size: 92,
