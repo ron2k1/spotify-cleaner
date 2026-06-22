@@ -101,6 +101,11 @@ export const api = {
   scanResult: (jobId: string) =>
     request<ScanResult>(`/api/scan/${encodeURIComponent(jobId)}/result`),
 
+  /** Full-page download target — the browser fetches and saves the CSV. Not
+   *  called through `request`; it's an href the anchor/`window` follows. */
+  exportCsvUrl: (jobId: string) =>
+    `/api/scan/${encodeURIComponent(jobId)}/export.csv`,
+
   startApply: (req: ApplyRequest) =>
     request<JobStarted>("/api/apply", {
       method: "POST",

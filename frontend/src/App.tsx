@@ -187,6 +187,13 @@ export default function App() {
   );
   const hasLiked = selectedRows.some((r) => r.is_liked);
   const hasPlaylist = selectedRows.some((r) => r.playlist_count > 0);
+  // Distinct playlists the removal would touch, so the dialog can say exactly
+  // how wide the blast radius is before you type DELETE.
+  const affectedPlaylists = useMemo(() => {
+    const ids = new Set<string>();
+    for (const r of selectedRows) for (const pid of r.playlist_ids) ids.add(pid);
+    return ids.size;
+  }, [selectedRows]);
 
   // --- Handlers ---
   const handleConnect = () => {
@@ -292,6 +299,7 @@ export default function App() {
           {result && !scanning && (
             <CandidateTable
               result={result}
+              scanId={scanId ?? ""}
               rowSelection={rowSelection}
               onRowSelectionChange={setRowSelection}
               onApplyClick={() => setApplyOpen(true)}
@@ -307,6 +315,7 @@ export default function App() {
         selectedCount={selectedIds.length}
         hasLiked={hasLiked}
         hasPlaylist={hasPlaylist}
+        playlistCount={affectedPlaylists}
         applying={applying}
         onConfirm={handleConfirmApply}
       />

@@ -1,4 +1,10 @@
-import { type CSSProperties, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   type ColumnDef,
   type OnChangeFn,
@@ -14,21 +20,50 @@ import {
   ArrowDown,
   ArrowUp,
   ChevronsUpDown,
+  Download,
   Heart,
   Music2,
+  Search,
   Trash2,
+  X,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { api } from "@/lib/api";
 import type { ScanResult, TrackRow } from "@/lib/types";
-import { formatCount, formatDate } from "@/lib/utils";
+import { cn, formatCount, formatDate } from "@/lib/utils";
 
 const ROW_HEIGHT = 56;
 
+// Confidence is text + colour, never colour alone, so it survives both
+// colour-blindness and a screen reader. Rank drives the sort (high first).
+const CONF: Record<string, { label: string; rank: number; className: string }> =
+  {
+    high: { label: "High", rank: 2, className: "bg-primary/15 text-primary" },
+    medium: {
+      label: "Medium",
+      rank: 1,
+      className: "bg-amber-500/15 text-amber-500",
+    },
+    low: {
+      label: "Low",
+      rank: 0,
+      className: "bg-muted text-muted-foreground",
+    },
+  };
+
+const CONF_TITLE: Record<string, string> = {
+  high: "High — an exact, unambiguous match (e.g. a Spotify-id play event).",
+  medium: "Medium — a fuzzier match or an indirect signal; sanity-check it.",
+  low: "Low — a coarse 'top vs not' signal that can't tell rare from never-played.",
+};
+
 interface CandidateTableProps {
   result: ScanResult;
+  scanId: string;
   rowSelection: RowSelectionState;
   onRowSelectionChange: OnChangeFn<RowSelectionState>;
   onApplyClick: () => void;
@@ -75,12 +110,51 @@ function colStyle(id: string, size: number): CSSProperties {
 
 export function CandidateTable({
   result,
+  scanId,
   rowSelection,
   onRowSelectionChange,
   onApplyClick,
   applying,
 }: CandidateTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // Filter client-side: the whole result set is already in memory, and keying
+  // rows by track_id (getRowId below) means a selection made before filtering
+  // survives it -- rows filtered out of view stay selected, so "search, select
+  // the matches, clear search, search again" accumulates rather than resets.
+  const data = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return result.rows;
+    return result.rows.filter(
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        r.artist_label.toLowerCase().includes(q) ||
+        r.reason.toLowerCase().includes(q),
+    );
+  }, [result.rows, query]);
+
+  // "/" focuses search from anywhere (unless you're already typing); Escape
+  // clears the box. Kept tiny on purpose -- power-user speed without stealing
+  // keys a screen-reader or form needs.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const el = document.activeElement;
+      const typing =
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLTextAreaElement ||
+        (el instanceof HTMLElement && el.isContentEditable);
+      if (e.key === "/" && !typing) {
+        e.preventDefault();
+        searchRef.current?.focus();
+      } else if (e.key === "Escape" && el === searchRef.current) {
+        setQuery("");
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
 
   const columns = useMemo<ColumnDef<TrackRow>[]>(
     () => [
@@ -95,14 +169,14 @@ export function CandidateTable({
               !table.getIsAllRowsSelected() && table.getIsSomeRowsSelected()
             }
             onChange={table.getToggleAllRowsSelectedHandler()}
-            aria-label="Select all"
+            aria-label="Select all shown"
           />
         ),
         cell: ({ row }) => (
           <Checkbox
             checked={row.getIsSelected()}
             onChange={row.getToggleSelectedHandler()}
-            aria-label="Select row"
+            aria-label={`Select ${row.original.name}`}
           />
         ),
       },
@@ -115,7 +189,7 @@ export function CandidateTable({
       {
         id: "reason",
         header: "Why flagged",
-        size: 240,
+        size: 220,
         enableSorting: false,
         cell: ({ row }) => (
           <span
@@ -127,9 +201,31 @@ export function CandidateTable({
         ),
       },
       {
+        id: "confidence",
+        header: "Confidence",
+        size: 116,
+        // Sort by trust, not alphabetically: high > medium > low.
+        accessorFn: (r) => CONF[r.confidence]?.rank ?? -1,
+        cell: ({ row }) => {
+          const c = CONF[row.original.confidence];
+          if (!c) return <span className="text-muted-foreground">—</span>;
+          return (
+            <span
+              className={cn(
+                "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                c.className,
+              )}
+              title={CONF_TITLE[row.original.confidence]}
+            >
+              {c.label}
+            </span>
+          );
+        },
+      },
+      {
         id: "plays",
         header: "Plays",
-        size: 88,
+        size: 80,
         accessorFn: (r) => r.play_count ?? Number.POSITIVE_INFINITY,
         cell: ({ row }) => (
           <span className="tabular-nums">
@@ -140,7 +236,7 @@ export function CandidateTable({
       {
         id: "last",
         header: "Last played",
-        size: 128,
+        size: 120,
         accessorFn: (r) => (r.last_played ? Date.parse(r.last_played) : 0),
         cell: ({ row }) => (
           <span className="text-muted-foreground">
@@ -151,7 +247,7 @@ export function CandidateTable({
       {
         id: "added",
         header: "Added",
-        size: 116,
+        size: 112,
         // Missing dates sort last (+Inf) so the default ascending order shows
         // the songs you've kept longest first — matching the planner's order.
         accessorFn: (r) =>
@@ -165,7 +261,7 @@ export function CandidateTable({
       {
         id: "playlists",
         header: "Playlists",
-        size: 92,
+        size: 88,
         accessorFn: (r) => r.playlist_count,
         cell: ({ row }) => (
           <span className="tabular-nums">
@@ -176,13 +272,18 @@ export function CandidateTable({
       {
         id: "liked",
         header: "Liked",
-        size: 64,
+        size: 60,
         enableSorting: false,
         cell: ({ row }) =>
           row.original.is_liked ? (
-            <Heart className="size-4 fill-primary text-primary" />
+            <Heart
+              className="size-4 fill-primary text-primary"
+              aria-label="Liked"
+            />
           ) : (
-            <span className="text-muted-foreground">—</span>
+            <span className="text-muted-foreground" aria-label="Not liked">
+              —
+            </span>
           ),
       },
     ],
@@ -190,7 +291,7 @@ export function CandidateTable({
   );
 
   const table = useReactTable({
-    data: result.rows,
+    data,
     columns,
     state: { rowSelection, sorting },
     enableRowSelection: true,
@@ -210,15 +311,29 @@ export function CandidateTable({
     overscan: 12,
   });
 
-  const selectedCount = table.getSelectedRowModel().rows.length;
+  const selectedCount = Object.values(rowSelection).filter(Boolean).length;
+  const filtering = query.trim().length > 0;
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">{result.count}</span>{" "}
-          candidate{result.count === 1 ? "" : "s"} via{" "}
-          <Badge variant="muted">{result.source}</Badge>
+        <p className="text-sm text-muted-foreground" aria-live="polite">
+          {filtering ? (
+            <>
+              <span className="font-medium text-foreground">
+                {data.length}
+              </span>{" "}
+              of {result.count} shown
+            </>
+          ) : (
+            <>
+              <span className="font-medium text-foreground">
+                {result.count}
+              </span>{" "}
+              candidate{result.count === 1 ? "" : "s"}
+            </>
+          )}{" "}
+          via <Badge variant="muted">{result.source}</Badge>
           {selectedCount > 0 && (
             <>
               {" · "}
@@ -228,8 +343,52 @@ export function CandidateTable({
               selected
             </>
           )}
-        </div>
-        <div className="flex items-center gap-2">
+        </p>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
+            <Input
+              ref={searchRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Filter  /"
+              aria-label="Filter candidates by track, artist, or reason"
+              spellCheck={false}
+              autoComplete="off"
+              className="h-9 w-44 pl-8 pr-8"
+            />
+            {filtering && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  searchRef.current?.focus();
+                }}
+                aria-label="Clear filter"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
+
+          <a
+            href={api.exportCsvUrl(scanId)}
+            download
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              result.count === 0 && "pointer-events-none opacity-50",
+            )}
+            aria-disabled={result.count === 0}
+          >
+            <Download />
+            CSV
+          </a>
+
           {selectedCount > 0 && (
             <Button
               variant="ghost"
@@ -255,9 +414,15 @@ export function CandidateTable({
         <div className="rounded-lg border border-border bg-card p-10 text-center text-sm text-muted-foreground">
           Nothing flagged — by this measure, you listen to everything you saved.
         </div>
+      ) : data.length === 0 ? (
+        <div className="rounded-lg border border-border bg-card p-10 text-center text-sm text-muted-foreground">
+          No candidates match “{query.trim()}”.
+        </div>
       ) : (
         <div
           ref={parentRef}
+          role="region"
+          aria-label="Cleanup candidates"
           className="max-h-[60vh] overflow-auto rounded-lg border border-border"
         >
           <table className="w-full text-sm" style={{ display: "grid" }}>
@@ -270,12 +435,21 @@ export function CandidateTable({
                       <th
                         key={header.id}
                         style={colStyle(header.column.id, header.getSize())}
+                        aria-sort={
+                          sorted === "asc"
+                            ? "ascending"
+                            : sorted === "desc"
+                              ? "descending"
+                              : header.column.getCanSort()
+                                ? "none"
+                                : undefined
+                        }
                         className="flex items-center px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground"
                       >
                         {header.isPlaceholder ? null : header.column.getCanSort() ? (
                           <button
                             type="button"
-                            className="flex items-center gap-1 transition-colors hover:text-foreground"
+                            className="flex items-center gap-1 rounded-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             onClick={header.column.getToggleSortingHandler()}
                           >
                             {flexRender(

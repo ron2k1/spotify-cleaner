@@ -21,6 +21,8 @@ interface ConfirmApplyDialogProps {
   selectedCount: number;
   hasLiked: boolean;
   hasPlaylist: boolean;
+  /** Distinct playlists the removal would touch — the blast radius. */
+  playlistCount: number;
   applying: boolean;
   onConfirm: (opts: { unlike: boolean; removeFromPlaylists: boolean }) => void;
 }
@@ -34,6 +36,7 @@ export function ConfirmApplyDialog({
   selectedCount,
   hasLiked,
   hasPlaylist,
+  playlistCount,
   applying,
   onConfirm,
 }: ConfirmApplyDialogProps) {
@@ -96,7 +99,13 @@ export function ConfirmApplyDialog({
             />
             <span>
               Remove from <strong>your playlists</strong>
-              {!hasPlaylist && (
+              {hasPlaylist ? (
+                <span className="text-muted-foreground">
+                  {" "}
+                  — affects {playlistCount} playlist
+                  {playlistCount === 1 ? "" : "s"}
+                </span>
+              ) : (
                 <span className="text-muted-foreground">
                   {" "}
                   — none of the selected are in your playlists
