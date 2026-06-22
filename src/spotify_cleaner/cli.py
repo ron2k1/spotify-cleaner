@@ -92,11 +92,6 @@ def _parse_args(argv):
         help="never flag tracks added within this many days (too new to judge)",
     )
     p.add_argument(
-        "--all-tracks",
-        action="store_true",
-        help="consider all library/playlist tracks, not just Liked Songs",
-    )
-    p.add_argument(
         "--apply", action="store_true", help="perform changes (default: dry run only)"
     )
     p.add_argument("--unlike", action="store_true", help="when applying, remove from Liked Songs")
@@ -144,7 +139,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     )
 
     scorer = _build_scorer(args, sp)
-    universe = list(library.tracks.values()) if args.all_tracks else library.liked()
+    universe = list(library.tracks.values())
     print(f"Scoring {len(universe)} track(s) via '{scorer.name}' ({scorer.mode} mode)...")
     stats = scorer.score(universe)
 
@@ -152,7 +147,6 @@ def main(argv: Optional[list[str]] = None) -> None:
         library,
         stats,
         scorer.mode,
-        liked_only=not args.all_tracks,
         min_plays=args.min_plays,
         stale_days=args.stale_days,
         grace_days=args.grace_days,

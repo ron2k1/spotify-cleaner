@@ -32,7 +32,6 @@ class ProfileInfo(BaseModel):
 class ScanRequest(BaseModel):
     source: Literal["toptracks", "gdpr"] = "toptracks"
     profile: str = "default"
-    all_tracks: bool = False
     min_plays: int = Field(2, ge=0)
     stale_days: Optional[int] = Field(None, ge=1)
     grace_days: Optional[int] = Field(None, ge=1)  # protect tracks added recently

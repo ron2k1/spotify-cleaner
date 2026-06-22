@@ -21,7 +21,6 @@ def plan(
     stats: dict[str, PlayStats],
     mode: str,
     *,
-    liked_only: bool = True,
     min_plays: int = 2,
     stale_days: Optional[int] = None,
     grace_days: Optional[int] = None,
@@ -38,7 +37,8 @@ def plan(
     positive evidence the track is recent, so a track with a missing/unparseable
     ``added_at`` is handled exactly as if no grace were set.
     """
-    universe = library.liked() if liked_only else list(library.tracks.values())
+    # Always the whole library -- Liked Songs plus every owned-playlist track.
+    universe = list(library.tracks.values())
     cutoff = (
         datetime.now(timezone.utc) - timedelta(days=stale_days)
         if stale_days is not None

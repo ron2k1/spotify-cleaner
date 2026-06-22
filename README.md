@@ -42,7 +42,7 @@ Everything is a **dry run by default** — it only prints candidates. Nothing is
 deleted unless you pass `--apply` *and* type `DELETE` at the prompt.
 
 ```bash
-# Zero-setup first look: liked songs that aren't in your all-time top tracks
+# Zero-setup first look: tracks that aren't in your all-time top tracks
 spotify-cleaner --source toptracks
 
 # The accurate version, once your export has arrived (see below)
@@ -53,8 +53,9 @@ spotify-cleaner --source gdpr --gdpr-dir ./streaming_history --min-plays 1 \
     --apply --unlike --remove-from-playlists
 ```
 
-Useful flags: `--all-tracks` (consider playlist tracks too, not just Liked
-Songs), `--limit N` (how many to print), `--time-range short_term|medium_term|long_term`.
+Every scan covers your whole library — Liked Songs **and** every playlist you
+own. Useful flags: `--limit N` (how many to print), `--time-range
+short_term|medium_term|long_term`.
 
 ## Web app (a local UI)
 

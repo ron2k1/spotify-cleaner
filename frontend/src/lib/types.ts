@@ -24,7 +24,6 @@ export type TimeRange = "short_term" | "medium_term" | "long_term";
 export interface ScanRequest {
   source: Source;
   profile: string;
-  all_tracks: boolean;
   min_plays: number;
   stale_days?: number | null;
   time_range: TimeRange;

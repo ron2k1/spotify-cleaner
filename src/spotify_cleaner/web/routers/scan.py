@@ -45,7 +45,6 @@ def start_scan(req: ScanRequest) -> JobStarted:
         target=run_scan,
         args=(job, sp, scorer),
         kwargs=dict(
-            all_tracks=req.all_tracks,
             min_plays=req.min_plays,
             stale_days=req.stale_days,
             grace_days=req.grace_days,

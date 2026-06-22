@@ -10,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { Source, TimeRange } from "@/lib/types";
@@ -18,7 +17,6 @@ import type { Source, TimeRange } from "@/lib/types";
 /** Everything the scan needs except `profile`, which App injects. */
 export interface ScanFormValues {
   source: Source;
-  all_tracks: boolean;
   min_plays: number;
   stale_days: number | null;
   time_range: TimeRange;
@@ -57,7 +55,6 @@ export function ScanForm({
   onScan,
 }: ScanFormProps) {
   const [source, setSource] = useState<Source>("toptracks");
-  const [allTracks, setAllTracks] = useState(false);
 
   // Held as strings so the fields can be cleared mid-edit.
   const [minPlays, setMinPlays] = useState("2");
@@ -73,7 +70,6 @@ export function ScanForm({
   function submit() {
     onScan({
       source,
-      all_tracks: allTracks,
       min_plays: Math.max(0, Number(minPlays) || 0),
       stale_days: staleDays.trim() ? Math.max(1, Number(staleDays) || 1) : null,
       time_range: timeRange,
@@ -130,7 +126,7 @@ export function ScanForm({
             </Labeled>
             <Labeled
               label="Top N"
-              hint="Flag Liked Songs that aren't in your top N."
+              hint="Flag tracks that aren't in your top N."
             >
               <Input
                 type="number"
@@ -184,15 +180,6 @@ export function ScanForm({
             </div>
           </div>
         )}
-
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={allTracks}
-            onChange={(e) => setAllTracks(e.target.checked)}
-          />
-          <ListMusic className="size-4 text-muted-foreground" />
-          Include all playlist tracks, not just Liked Songs
-        </label>
 
         <div className="flex items-center gap-3">
           <Button onClick={submit} disabled={!canScan}>

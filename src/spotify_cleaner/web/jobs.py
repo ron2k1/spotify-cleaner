@@ -104,7 +104,6 @@ def run_scan(
     sp: "spotipy.Spotify",
     scorer: Any,
     *,
-    all_tracks: bool,
     min_plays: int,
     stale_days: Optional[int],
     grace_days: Optional[int] = None,
@@ -127,7 +126,7 @@ def run_scan(
             ),
         )
 
-        universe = list(library.tracks.values()) if all_tracks else liked
+        universe = list(library.tracks.values())
         job.emit(
             "phase",
             phase="scoring",
@@ -140,7 +139,6 @@ def run_scan(
             library,
             stats,
             scorer.mode,
-            liked_only=not all_tracks,
             min_plays=min_plays,
             stale_days=stale_days,
             grace_days=grace_days,
