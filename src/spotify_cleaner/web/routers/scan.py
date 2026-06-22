@@ -7,10 +7,13 @@ from Spotify. The source only changes how those tracks are *scored*.
 
 from __future__ import annotations
 
+import csv
+import io
 import os
 import threading
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import Response
 from sse_starlette.sse import EventSourceResponse
 
 from ...config import LastfmConfig
@@ -87,3 +90,44 @@ def scan_result(job_id: str) -> dict:
         "mode": r["mode"],
         "rows": r["rows"],
     }
+
+
+# Columns chosen for a human reviewing in a spreadsheet, plus uri so the export
+# doubles as a re-import/restore reference.
+_CSV_COLS = [
+    "name",
+    "artist_label",
+    "reason",
+    "play_count",
+    "last_played",
+    "confidence",
+    "is_liked",
+    "playlist_count",
+    "added_at",
+    "uri",
+]
+
+
+@router.get("/scan/{job_id}/export.csv")
+def scan_export(job_id: str) -> Response:
+    """Download the scan's candidates as CSV, for review before applying."""
+    job = manager.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="job_not_found")
+    if job.status != "done" or not job.result:
+        raise HTTPException(status_code=409, detail="scan_not_ready")
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(_CSV_COLS)
+    for row in job.result["rows"]:
+        writer.writerow(["" if row.get(c) is None else row.get(c) for c in _CSV_COLS])
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="spotify-cleaner-{job_id[:8]}.csv"'
+            )
+        },
+    )
