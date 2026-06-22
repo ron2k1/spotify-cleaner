@@ -36,6 +36,9 @@ web = [
 
 [project.scripts]
 spotify-cleaner = "spotify_cleaner.cli:main"
+# Launches the local web UI (uvicorn on 127.0.0.1:8888). Needs the [web] extra:
+#   pipx install "spotify-cleaner[web]"  ->  spotify-cleaner-web
+spotify-cleaner-web = "spotify_cleaner.web.__main__:main"
 
 [build-system]
 requires = ["setuptools>=68"]
