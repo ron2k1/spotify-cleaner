@@ -60,6 +60,52 @@ spotify-cleaner --source gdpr --gdpr-dir ./streaming_history --min-plays 1 \
 Useful flags: `--all-tracks` (consider playlist tracks too, not just Liked
 Songs), `--limit N` (how many to print), `--time-range short_term|medium_term|long_term`.
 
+## Cleaning up for a friend (even a non-technical one)
+
+Your friends do **not** need their own "API key." A Client ID/Secret identifies
+the *app*, not the person — you make it once, and it's yours. A friend only ever
+**logs into their own Spotify and clicks Agree**, which lets your app see *their*
+library. Their token is the only per-person thing, and it stays on whichever
+machine they authorized from.
+
+A new Spotify app runs in **Development Mode**: only people you add by their
+Spotify-account email under your app's **User Management** (in the dashboard) can
+authorize it, up to **25 users**. "Me and my friends" fits inside that, so you
+never need Spotify's public-app approval. Add each friend's email there first.
+
+Then pick the path that matches the friend:
+
+**A technical friend** runs the tool themselves. Cleanest: they create their own
+free Spotify app (the same one-dashboard-click you did) so nothing is shared.
+Their login never leaves their machine.
+
+**A non-technical friend** can't install anything, so **you run it for them** on
+your machine. Two flags make that safe:
+
+```bash
+# Authorize the friend once. --profile gives them their own token file so it
+# never collides with yours; --no-browser prints a link instead of opening a
+# browser, so they can approve on their own phone.
+spotify-cleaner --source toptracks --profile alice --no-browser
+```
+
+The tool prints `Go to the following URL: …` — text that link to your friend.
+They open it (already logged into Spotify on their phone), tap **Agree**, and
+land on a `http://127.0.0.1:8888/callback?...` page that won't load. That's
+expected: they copy that URL from the address bar and send it back to you, you
+paste it at the prompt, and their login is saved as `.cache-spotify-alice`. The
+link only carries your public Client ID, never your secret.
+
+After that, every run for that friend just reuses their cached login:
+
+```bash
+spotify-cleaner --source gdpr --gdpr-dir ./alice_history --profile alice \
+    --min-plays 1 --apply --unlike --remove-from-playlists
+```
+
+Show them the dry-run list first, get their OK, then add `--apply`. They can
+revoke your app any time at <https://www.spotify.com/account/apps/>.
+
 ## Getting the GDPR export (the accurate source)
 
 1. <https://www.spotify.com/account/privacy/> → tick **only** "Extended

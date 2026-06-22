@@ -1,6 +1,7 @@
 # secrets & tokens
 .env
 .cache-spotify
+.cache-spotify-*
 *.cache
 
 # your downloaded data export (can be large / personal)

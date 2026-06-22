@@ -108,6 +108,17 @@ def _parse_args(argv):
     p.add_argument(
         "--limit", type=_positive_int, default=50, help="how many candidates to print"
     )
+    p.add_argument(
+        "--profile",
+        help="token-cache name, e.g. a friend's name; keeps each person's login "
+        "in its own .cache-spotify-<profile> file when you run for several people",
+    )
+    p.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="print the authorize URL and paste back the redirect URL instead of "
+        "opening a browser; lets you authorize a friend on their own device",
+    )
     return p, p.parse_args(argv)
 
 
@@ -128,7 +139,10 @@ def main(argv: Optional[list[str]] = None) -> None:
     if args.apply and not (args.unlike or args.remove_from_playlists):
         parser.error("--apply needs at least one of --unlike / --remove-from-playlists")
 
-    sp = make_client(SpotifyConfig.from_env())
+    sp = make_client(
+        SpotifyConfig.from_env(profile=args.profile),
+        open_browser=not args.no_browser,
+    )
 
     print("Reading your library (Liked Songs + owned playlists)...")
     library = build_library(sp, owned_only=True)
