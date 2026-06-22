@@ -17,6 +17,7 @@ from fastapi.responses import Response
 from sse_starlette.sse import EventSourceResponse
 
 from ...config import LastfmConfig
+from ...csvsafe import csv_safe as _csv_safe
 from ...scoring.gdpr import GdprScorer
 from ...scoring.lastfm import LastfmScorer
 from ...scoring.toptracks import TopTracksScorer
@@ -106,17 +107,6 @@ _CSV_COLS = [
     "added_at",
     "uri",
 ]
-
-# A spreadsheet treats a cell starting with any of these as a formula, so a
-# track literally named ``=HYPERLINK("…")`` would execute on open. Track,
-# artist and (via playlist names) reason are all user-controlled free text.
-_CSV_FORMULA_LEAD = ("=", "+", "-", "@", "\t", "\r")
-
-
-def _csv_safe(value: object) -> str:
-    """Defang CSV formula injection (CWE-1236) by quoting risky leads."""
-    s = "" if value is None else str(value)
-    return "'" + s if s[:1] in _CSV_FORMULA_LEAD else s
 
 
 @router.get("/scan/{job_id}/export.csv")

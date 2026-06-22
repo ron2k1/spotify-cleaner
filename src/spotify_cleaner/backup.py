@@ -20,6 +20,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
+from .csvsafe import csv_safe
+
 if TYPE_CHECKING:
     from .library import Library
     from .models import ScoredTrack
@@ -112,15 +114,18 @@ def write_backup(
             ]
         )
         for r in rows:
+            # Same formula-injection defang as the scan export: track/artist/
+            # playlist names are attacker-influenceable and this file is meant
+            # to be opened in a spreadsheet.
             writer.writerow(
                 [
-                    r["track_id"],
-                    r["uri"],
-                    r["name"],
-                    r["artists"],
+                    csv_safe(r["track_id"]),
+                    csv_safe(r["uri"]),
+                    csv_safe(r["name"]),
+                    csv_safe(r["artists"]),
                     r["is_liked"],
-                    " | ".join(r["playlist_names"]),
-                    r["reason"],
+                    csv_safe(" | ".join(r["playlist_names"])),
+                    csv_safe(r["reason"]),
                     r["play_count"],
                 ]
             )
