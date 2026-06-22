@@ -9,7 +9,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import Callable, Optional
+
+# A best-effort progress sink: (phase, current, total_or_None). The long Spotify
+# I/O functions call it so a UI can show live progress. The CLI passes nothing,
+# so every call collapses to a no-op and the command-line path is unchanged.
+ProgressFn = Callable[[str, int, Optional[int]], None]
 
 
 @dataclass(frozen=True)

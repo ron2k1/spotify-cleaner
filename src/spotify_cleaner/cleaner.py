@@ -7,10 +7,10 @@ DELETE). The two-key design makes an accidental wipe very hard.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from .library import Library
-from .models import ScoredTrack
+from .models import ProgressFn, ScoredTrack
 
 if TYPE_CHECKING:
     import spotipy
@@ -43,6 +43,7 @@ def apply(
     confirm: bool,
     unlike: bool,
     remove_from_playlists: bool,
+    progress: Optional[ProgressFn] = None,
 ) -> dict:
     """Remove candidates from playlists and/or unlike them. No-op unless confirm."""
     summary = {"unliked": 0, "removed_from_playlists": 0, "playlists_touched": 0}
@@ -57,24 +58,39 @@ def apply(
 
     try:
         if remove_from_playlists:
-            for pl in library.playlists.values():
-                uris = [
-                    u
-                    for u in pl.track_uris
-                    if u.startswith("spotify:track:") and u.split(":")[-1] in cand_ids
-                ]
-                if not uris:
-                    continue
+            # Resolve which playlists actually contain a candidate first, so the
+            # progress total is the real count of playlists we'll touch, not the
+            # whole library (most playlists have no matches).
+            pending = [
+                (
+                    pl,
+                    [
+                        u
+                        for u in pl.track_uris
+                        if u.startswith("spotify:track:")
+                        and u.split(":")[-1] in cand_ids
+                    ],
+                )
+                for pl in library.playlists.values()
+            ]
+            pending = [(pl, uris) for pl, uris in pending if uris]
+            total_pl = len(pending)
+            for done, (pl, uris) in enumerate(pending, 1):
                 for batch in _chunks(uris, 100):  # playlist removal cap is 100/call
                     sp.playlist_remove_all_occurrences_of_items(pl.playlist_id, batch)
                     summary["removed_from_playlists"] += len(batch)
                 summary["playlists_touched"] += 1
+                if progress is not None:
+                    progress("removing_from_playlists", done, total_pl)
 
         if unlike:
             liked_ids = [c.track.track_id for c in candidates if c.track.is_liked]
+            total_liked = len(liked_ids)
             for batch in _chunks(liked_ids, 50):  # saved-track removal cap is 50/call
                 sp.current_user_saved_tracks_delete(tracks=batch)
                 summary["unliked"] += len(batch)
+                if progress is not None:
+                    progress("unliking", summary["unliked"], total_liked)
     except Exception as exc:
         # A batch may have committed server-side before this raised. Show what
         # got through (only the error TYPE, never the message — it can carry
