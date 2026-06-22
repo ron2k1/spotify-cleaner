@@ -3,16 +3,14 @@
 from __future__ import annotations
 
 import argparse
-import os
 from typing import Optional
 
 from . import cleaner
 from .auth import make_client
-from .config import LastfmConfig, SpotifyConfig
+from .config import SpotifyConfig
 from .library import build_library
 from .planner import plan
 from .scoring.gdpr import GdprScorer
-from .scoring.lastfm import LastfmScorer
 from .scoring.toptracks import TopTracksScorer
 
 
@@ -50,9 +48,6 @@ def _nonneg_int(value: str) -> int:
 def _build_scorer(args, sp):
     if args.source == "gdpr":
         return GdprScorer(args.gdpr_dir, min_ms=args.min_ms)
-    if args.source == "lastfm":
-        cfg = LastfmConfig.from_env()
-        return LastfmScorer(cfg.api_key, cfg.username)
     return TopTracksScorer(sp, time_range=args.time_range, top_n=args.top_n)
 
 
@@ -63,13 +58,12 @@ def _parse_args(argv):
     )
     p.add_argument(
         "--source",
-        choices=["gdpr", "lastfm", "toptracks"],
+        choices=["gdpr", "toptracks"],
         default="toptracks",
         help="where play data comes from (default: toptracks, zero setup)",
     )
     p.add_argument("--gdpr-dir", help="folder of unzipped Extended Streaming History JSON")
     p.add_argument("--min-ms", type=int, default=30_000, help="gdpr: ms to count a play")
-    p.add_argument("--lastfm-user", help="Last.fm username (or set LASTFM_USERNAME)")
     p.add_argument(
         "--time-range",
         choices=["short_term", "medium_term", "long_term"],
@@ -134,14 +128,6 @@ def main(argv: Optional[list[str]] = None) -> None:
 
     if args.source == "gdpr" and not args.gdpr_dir:
         parser.error("--source gdpr requires --gdpr-dir")
-    if args.lastfm_user:
-        # Direct assignment: an explicit flag must win over a stale exported
-        # LASTFM_USERNAME (setdefault would let the env value silently win).
-        os.environ["LASTFM_USERNAME"] = args.lastfm_user
-    if args.source == "lastfm":
-        # Fail fast on missing creds BEFORE the Spotify auth + full library
-        # fetch, so a missing key doesn't waste an interactive browser consent.
-        LastfmConfig.from_env()
     if args.apply and not (args.unlike or args.remove_from_playlists):
         parser.error("--apply needs at least one of --unlike / --remove-from-playlists")
 

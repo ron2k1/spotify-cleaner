@@ -12,15 +12,14 @@ this project, ever sees it.
 
 **Spotify's API does not expose your personal play counts.** Your desktop app
 shows them; the API hides them. So "least listened" has to come from one of
-three sources, and you pick which one:
+two sources, and you pick which one:
 
 | `--source`   | True play counts?      | Setup                                   | Best for |
 |--------------|------------------------|-----------------------------------------|----------|
 | `toptracks`  | No (top-50 vs not)     | none                                    | a fast first pass right now |
 | `gdpr`       | Yes (lifetime + dates) | request your data export, wait a bit    | the real, accurate cleanup |
-| `lastfm`     | Yes (scrobbles only)   | needs prior Last.fm scrobbling          | if you already scrobble |
 
-The reading and removing machinery is identical for all three. Only the
+The reading and removing machinery is identical for both. Only the
 score source differs — that is the `Scorer` strategy you select.
 
 ## Install
@@ -48,9 +47,6 @@ spotify-cleaner --source toptracks
 
 # The accurate version, once your export has arrived (see below)
 spotify-cleaner --source gdpr --gdpr-dir ./streaming_history --min-plays 1 --stale-days 365
-
-# If you scrobble to Last.fm
-spotify-cleaner --source lastfm --lastfm-user yourname --min-plays 2
 
 # Actually remove them (asks for confirmation):
 spotify-cleaner --source gdpr --gdpr-dir ./streaming_history --min-plays 1 \

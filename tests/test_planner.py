@@ -48,7 +48,7 @@ def test_count_mode_unknown_count_not_flagged():
     # play_count=None means "lookup failed / unknown", NOT zero. It must not
     # be treated as a low-play deletion candidate.
     lib = _lib([_t("a")])
-    stats = {"a": PlayStats("lastfm", play_count=None, note="lookup failed")}
+    stats = {"a": PlayStats("unknown", play_count=None, note="lookup failed")}
     cands = plan(lib, stats, "count", min_plays=2)
     assert cands == []
 

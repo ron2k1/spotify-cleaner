@@ -91,8 +91,9 @@ def _why(
 
     # count mode
     if st.play_count is None:
-        # Unknown plays (e.g. a failed Last.fm lookup) is not evidence of low
-        # listening — don't flag it. "Unknown" must never collapse to "zero".
+        # Unknown plays (e.g. a count-mode source whose lookup failed) is not
+        # evidence of low listening — don't flag it. "Unknown" must never
+        # collapse to "zero".
         return ""
     count = st.play_count
     if count <= min_plays:

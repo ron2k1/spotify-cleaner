@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from "react";
-import { Clock, Database, ListMusic, Radio, Search } from "lucide-react";
+import { Clock, Database, ListMusic, Search } from "lucide-react";
 
 import { GdprDropzone } from "@/components/GdprDropzone";
 import { Button } from "@/components/ui/button";
@@ -24,15 +24,12 @@ export interface ScanFormValues {
   time_range: TimeRange;
   top_n: number;
   min_ms: number;
-  lastfm_user: string | null;
   gdpr_token: string | null;
 }
 
 interface ScanFormProps {
   disabled: boolean;
   scanning: boolean;
-  /** When false, the Last.fm source is greyed out (no LASTFM_API_KEY on server). */
-  lastfmAvailable: boolean;
   onScan: (values: ScanFormValues) => void;
 }
 
@@ -57,7 +54,6 @@ function Labeled({
 export function ScanForm({
   disabled,
   scanning,
-  lastfmAvailable,
   onScan,
 }: ScanFormProps) {
   const [source, setSource] = useState<Source>("toptracks");
@@ -69,7 +65,6 @@ export function ScanForm({
   const [topN, setTopN] = useState("50");
   const [timeRange, setTimeRange] = useState<TimeRange>("long_term");
   const [minSeconds, setMinSeconds] = useState("30");
-  const [lastfmUser, setLastfmUser] = useState("");
   const [gdprToken, setGdprToken] = useState<string | null>(null);
 
   const needsUpload = source === "gdpr" && !gdprToken;
@@ -84,7 +79,6 @@ export function ScanForm({
       time_range: timeRange,
       top_n: Math.min(50, Math.max(1, Number(topN) || 50)),
       min_ms: Math.max(0, Math.round((Number(minSeconds) || 0) * 1000)),
-      lastfm_user: lastfmUser.trim() || null,
       gdpr_token: gdprToken,
     });
   }
@@ -115,23 +109,7 @@ export function ScanForm({
             <Database />
             GDPR export
           </ToggleGroupItem>
-          <ToggleGroupItem
-            value="lastfm"
-            disabled={!lastfmAvailable}
-            title={
-              lastfmAvailable ? undefined : "Set LASTFM_API_KEY on the server"
-            }
-          >
-            <Radio />
-            Last.fm
-          </ToggleGroupItem>
         </ToggleGroup>
-        {!lastfmAvailable && (
-          <p className="-mt-3 text-xs text-muted-foreground">
-            Last.fm is greyed out until <code>LASTFM_API_KEY</code> is set on
-            the server.
-          </p>
-        )}
 
         {source === "toptracks" && (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -204,43 +182,6 @@ export function ScanForm({
                 />
               </Labeled>
             </div>
-          </div>
-        )}
-
-        {source === "lastfm" && (
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Labeled
-              label="Last.fm username"
-              hint="Needs LASTFM_API_KEY set on the server."
-            >
-              <Input
-                value={lastfmUser}
-                onChange={(e) => setLastfmUser(e.target.value)}
-                placeholder="from env if blank"
-                spellCheck={false}
-                autoComplete="off"
-              />
-            </Labeled>
-            <Labeled label="Fewer than … plays" hint="The cutoff to flag.">
-              <Input
-                type="number"
-                min={0}
-                value={minPlays}
-                onChange={(e) => setMinPlays(e.target.value)}
-              />
-            </Labeled>
-            <Labeled
-              label="Not played in … days"
-              hint="Optional staleness cutoff."
-            >
-              <Input
-                type="number"
-                min={1}
-                placeholder="off"
-                value={staleDays}
-                onChange={(e) => setStaleDays(e.target.value)}
-              />
-            </Labeled>
           </div>
         )}
 

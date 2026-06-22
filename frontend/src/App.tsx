@@ -27,8 +27,6 @@ function explain(e: unknown): string {
       return "Connect Spotify for this profile first.";
     case "spotify_app_not_configured":
       return "Set your Spotify Client ID/Secret, then restart the server.";
-    case "lastfm_not_configured":
-      return "Last.fm needs LASTFM_API_KEY set on the server.";
     case "gdpr_upload_missing":
       return "Re-upload your GDPR export — the previous one expired.";
     default:
@@ -87,7 +85,6 @@ export default function App() {
         setConfig({
           configured: false,
           redirect_uri: "",
-          lastfm_available: false,
         }),
       );
     refreshProfiles();
@@ -288,7 +285,6 @@ export default function App() {
           <ScanForm
             disabled={!auth?.connected || scanning}
             scanning={scanning}
-            lastfmAvailable={config?.lastfm_available ?? false}
             onScan={handleScan}
           />
 

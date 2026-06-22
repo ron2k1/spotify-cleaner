@@ -9,7 +9,7 @@ around anything destructive.
 ```
 src/spotify_cleaner/
   auth.py, library.py    Spotify I/O (OAuth, reading Liked Songs + owned playlists)
-  scoring/               the pluggable sources — toptracks / gdpr / lastfm
+  scoring/               the pluggable sources — toptracks / gdpr
   planner.py             pure candidacy logic (which tracks are "least listened"); fully tested
   cleaner.py             the guarded removals (dry-run by default, typed-DELETE gate)
   backup.py              writes a restore manifest + audit log before any delete
@@ -66,7 +66,7 @@ how-to instead of a blank 404 — the JSON API is still fully usable.
   there's intentionally no enforced Prettier/ESLint config, so mirror the file
   you're editing (2-space indent, double quotes, trailing commas in TS).
 - **Never leak secrets or raw errors.** The server returns machine-readable
-  detail codes (`not_connected`, `lastfm_not_configured`), never exception
+  detail codes (`not_connected`, `gdpr_upload_missing`), never exception
   messages, response bodies, or tokens. Logs follow the same rule.
 - **Treat destructive paths with suspicion.** Removals are dry-run by default,
   gated behind a typed `DELETE`, only touch playlists you own, and write a

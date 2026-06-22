@@ -15,7 +15,6 @@ from pydantic import BaseModel, Field
 class ConfigInfo(BaseModel):
     configured: bool  # are SPOTIFY_CLIENT_ID/_SECRET set?
     redirect_uri: str  # echo it so the UI can show "register this exact URI"
-    lastfm_available: bool = False  # is LASTFM_API_KEY set? gates the source picker
 
 
 class AuthStatus(BaseModel):
@@ -31,7 +30,7 @@ class ProfileInfo(BaseModel):
 
 
 class ScanRequest(BaseModel):
-    source: Literal["toptracks", "gdpr", "lastfm"] = "toptracks"
+    source: Literal["toptracks", "gdpr"] = "toptracks"
     profile: str = "default"
     all_tracks: bool = False
     min_plays: int = Field(2, ge=0)
@@ -40,7 +39,6 @@ class ScanRequest(BaseModel):
     time_range: Literal["short_term", "medium_term", "long_term"] = "long_term"
     top_n: int = Field(50, ge=1, le=50)
     min_ms: int = Field(30_000, ge=0)
-    lastfm_user: Optional[str] = None
     gdpr_token: Optional[str] = None  # handle from a prior /api/gdpr/upload
 
 

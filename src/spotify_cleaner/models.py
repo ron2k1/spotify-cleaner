@@ -1,8 +1,8 @@
 """Core data contracts shared across the whole tool.
 
 These dataclasses are the only types the planner and cleaner know about.
-Scorers translate their very different raw data (GDPR JSON, Last.fm responses,
-top-track ranks) into ``PlayStats`` so everything downstream stays uniform.
+Scorers translate their very different raw data (GDPR JSON, top-track ranks)
+into ``PlayStats`` so everything downstream stays uniform.
 """
 
 from __future__ import annotations

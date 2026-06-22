@@ -4,8 +4,6 @@
 export interface ConfigInfo {
   configured: boolean;
   redirect_uri: string;
-  /** Is LASTFM_API_KEY set on the server? Gates the Last.fm source. */
-  lastfm_available: boolean;
 }
 
 export interface AuthStatus {
@@ -20,7 +18,7 @@ export interface ProfileInfo {
   connected: boolean;
 }
 
-export type Source = "toptracks" | "gdpr" | "lastfm";
+export type Source = "toptracks" | "gdpr";
 export type TimeRange = "short_term" | "medium_term" | "long_term";
 
 export interface ScanRequest {
@@ -32,7 +30,6 @@ export interface ScanRequest {
   time_range: TimeRange;
   top_n: number;
   min_ms: number;
-  lastfm_user?: string | null;
   gdpr_token?: string | null;
 }
 

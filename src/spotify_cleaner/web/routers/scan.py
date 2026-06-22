@@ -1,25 +1,22 @@
 """Start a scan, stream its progress, fetch its candidate rows.
 
-A scan always needs a connected Spotify client -- even ``gdpr``/``lastfm``,
-because the *library* (which tracks are liked / in which playlists) only comes
-from Spotify. The source only changes how those tracks are *scored*.
+A scan always needs a connected Spotify client -- even ``gdpr``, because the
+*library* (which tracks are liked / in which playlists) only comes from
+Spotify. The source only changes how those tracks are *scored*.
 """
 
 from __future__ import annotations
 
 import csv
 import io
-import os
 import threading
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 from sse_starlette.sse import EventSourceResponse
 
-from ...config import LastfmConfig
 from ...csvsafe import csv_safe as _csv_safe
 from ...scoring.gdpr import GdprScorer
-from ...scoring.lastfm import LastfmScorer
 from ...scoring.toptracks import TopTracksScorer
 from .. import oauth
 from ..jobs import manager, run_scan, sse_events
@@ -32,14 +29,6 @@ router = APIRouter(prefix="/api", tags=["scan"])
 def _build_scorer(req: ScanRequest, sp):
     if req.source == "gdpr":
         return GdprScorer(str(resolve_gdpr(req.gdpr_token)), min_ms=req.min_ms)
-    if req.source == "lastfm":
-        if req.lastfm_user:
-            os.environ["LASTFM_USERNAME"] = req.lastfm_user
-        try:
-            lf = LastfmConfig.from_env()
-        except SystemExit:
-            raise HTTPException(status_code=400, detail="lastfm_not_configured")
-        return LastfmScorer(lf.api_key, lf.username)
     return TopTracksScorer(sp, time_range=req.time_range, top_n=req.top_n)
 
 

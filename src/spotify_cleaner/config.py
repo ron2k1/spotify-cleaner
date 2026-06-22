@@ -85,19 +85,3 @@ class SpotifyConfig:
             ),
             cache_path=cache_path,
         )
-
-
-@dataclass
-class LastfmConfig:
-    api_key: str
-    username: str
-
-    @classmethod
-    def from_env(cls) -> "LastfmConfig":
-        key = os.getenv("LASTFM_API_KEY")
-        user = os.getenv("LASTFM_USERNAME")
-        if not key or not user:
-            raise SystemExit(
-                "Last.fm source needs LASTFM_API_KEY and LASTFM_USERNAME set."
-            )
-        return cls(api_key=key, username=user)
