@@ -133,7 +133,7 @@ def run_scan(
             phase="scoring",
             message=f"Scoring {len(universe)} track(s) via '{scorer.name}'…",
         )
-        stats = scorer.score(universe)
+        stats = scorer.score(universe, progress=prog)
 
         job.emit("phase", phase="planning", message="Selecting cleanup candidates…")
         candidates = plan(

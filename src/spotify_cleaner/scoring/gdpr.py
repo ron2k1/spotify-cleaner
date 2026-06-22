@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from ..models import HIGH, MEDIUM, PlayStats, Track
+from ..models import HIGH, MEDIUM, PlayStats, ProgressFn, Track
 
 MIN_MS = 30_000  # a "real" play: at least 30s, matching common scrobble rules
 _SEP = "␟"  # unlikely separator for the artist/title fallback key
@@ -76,7 +76,9 @@ class GdprScorer:
             if isinstance(data, list):
                 yield from data
 
-    def score(self, tracks: list[Track]) -> dict[str, PlayStats]:
+    def score(
+        self, tracks: list[Track], progress: Optional[ProgressFn] = None
+    ) -> dict[str, PlayStats]:
         # rec = [count, last_played]; two indexes so a row can be matched
         # by exact id, with an artist/title fallback for legacy rows.
         by_id: dict[str, list] = defaultdict(lambda: [0, None])
@@ -141,4 +143,8 @@ class GdprScorer:
                 note=note,
                 confidence=confidence,
             )
+        # The export is already parsed into the two indexes above; matching the
+        # library against them is fast, so a single completion tick is enough.
+        if progress is not None:
+            progress("scoring", len(tracks), len(tracks))
         return out

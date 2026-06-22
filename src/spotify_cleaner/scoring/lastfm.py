@@ -14,7 +14,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from ..models import MEDIUM, PlayStats, Track
+from ..models import MEDIUM, PlayStats, ProgressFn, Track
 
 API = "https://ws.audioscrobbler.com/2.0/"
 
@@ -77,9 +77,12 @@ class LastfmScorer:
         except (TypeError, ValueError):
             return 0
 
-    def score(self, tracks: list[Track]) -> dict[str, PlayStats]:
+    def score(
+        self, tracks: list[Track], progress: Optional[ProgressFn] = None
+    ) -> dict[str, PlayStats]:
         out: dict[str, PlayStats] = {}
-        for t in tracks:
+        total = len(tracks)
+        for i, t in enumerate(tracks, 1):
             artist = t.artists[0] if t.artists else ""
             pc = self._playcount(artist, t.name) if artist else None
             note = f"{pc} scrobbles" if pc is not None else "lookup failed"
@@ -91,5 +94,10 @@ class LastfmScorer:
                 # may have listened on a device that wasn't connected. MEDIUM.
                 confidence=MEDIUM,
             )
+            # One Last.fm lookup per track at ~0.25s each makes this the slow
+            # scorer. Emit every 25 (and once at the end) so the web UI shows a
+            # live fraction instead of an apparently frozen "scoring…" phase.
+            if progress is not None and (i % 25 == 0 or i == total):
+                progress("scoring", i, total)
             time.sleep(self.pause)
         return out

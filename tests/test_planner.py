@@ -243,6 +243,15 @@ def test_toptracks_confidence_is_always_low():
     assert stats["a"].confidence == LOW and stats["b"].confidence == LOW
 
 
+def test_scorer_reports_progress_when_given_a_callback():
+    # The web layer passes a progress sink so a slow scan shows a live fraction.
+    seen: list[tuple] = []
+    TopTracksScorer(_FakeSp(["a"])).score(
+        [_t("a")], progress=lambda phase, cur, tot: seen.append((phase, cur, tot))
+    )
+    assert seen and seen[-1] == ("scoring", 1, 1)
+
+
 def test_gdpr_confidence_high_for_id_match(tmp_path):
     rows = [{"ts": "2024-01-01T10:00:00Z", "ms_played": 200000,
              "spotify_track_uri": "spotify:track:a",
