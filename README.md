@@ -82,12 +82,17 @@ pip install -e ".[web]"
 python -m spotify_cleaner.web   # opens http://127.0.0.1:8888
 ```
 
+After `pip install -e ".[web]"` you can also just run `spotify-cleaner-web`.
+
 For UI work, run `npm run dev` instead (Vite on `:5173`, proxying the API to
 `:8888`) so changes hot-reload without a rebuild.
 
-Album thumbnails are best-effort: some Spotify apps can't read the catalog
-`/v1/tracks` endpoint, and those rows just show a placeholder icon. The scan,
-scoring, and removal are unaffected — art is the only thing that degrades.
+The table shows each candidate's **confidence** (how much to trust the verdict
+for that source), lets you **filter** as you type (press `/` to focus the box),
+and **exports to CSV** for review in a spreadsheet. Album thumbnails come from
+Spotify's public oEmbed endpoint (no API key, fetched lazily and proxied so the
+browser sees no third-party request); the handful of tracks it has no thumbnail
+for fall back to a placeholder icon, and nothing else is affected.
 
 ## Cleaning up for a friend (even a non-technical one)
 
