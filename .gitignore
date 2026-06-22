@@ -1,0 +1,19 @@
+# secrets & tokens
+.env
+.cache-spotify
+*.cache
+
+# your downloaded data export (can be large / personal)
+streaming_history/
+*.zip
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.pytest_tmp/
+build/
+dist/

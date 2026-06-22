@@ -1,0 +1,46 @@
+[project]
+name = "spotify-cleaner"
+version = "0.1.0"
+description = "Find and clear out your least-listened Spotify liked songs and playlist tracks."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Ronil Basu" }]
+keywords = ["spotify", "playlist", "cleanup", "cli", "music"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+    "Topic :: Multimedia :: Sound/Audio",
+]
+dependencies = [
+    "spotipy>=2.24.0",
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ron2k1/spotify-cleaner"
+Repository = "https://github.com/ron2k1/spotify-cleaner"
+Issues = "https://github.com/ron2k1/spotify-cleaner/issues"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+spotify-cleaner = "spotify_cleaner.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+# Keep pytest's scratch dir inside the project; the system Temp folder is
+# ACL-locked under some Windows sandboxes.
+addopts = "--basetemp=.pytest_tmp"
