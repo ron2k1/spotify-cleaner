@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
+from . import backup
 from .library import Library
 from .models import ProgressFn, ScoredTrack
 
@@ -56,6 +57,25 @@ def apply(
 
     cand_ids = {c.track.track_id for c in candidates}
 
+    # Safety net: snapshot what is about to be removed (and from which playlists)
+    # so it can be restored by hand -- Spotify has no undo. If the snapshot can't
+    # be written we warn and continue rather than block: the user explicitly
+    # typed DELETE, and the deletes themselves are idempotent.
+    manifest = None
+    try:
+        manifest = backup.write_backup(
+            candidates,
+            library,
+            unlike=unlike,
+            remove_from_playlists=remove_from_playlists,
+        )
+        print(f"Backup written to {manifest}")
+    except OSError as exc:
+        print(
+            f"\nWarning: could not write backup ({type(exc).__name__}); "
+            "proceeding without a restore manifest."
+        )
+
     try:
         if remove_from_playlists:
             # Resolve which playlists actually contain a candidate first, so the
@@ -92,10 +112,17 @@ def apply(
                 if progress is not None:
                     progress("unliking", summary["unliked"], total_liked)
     except Exception as exc:
-        # A batch may have committed server-side before this raised. Show what
-        # got through (only the error TYPE, never the message — it can carry
-        # response bodies/tokens) and re-raise. Both ops are idempotent, so
-        # re-running the same command safely finishes the job.
+        # A batch may have committed server-side before this raised. Record the
+        # partial outcome in the audit log, then show what got through (only the
+        # error TYPE, never the message — it can carry response bodies/tokens)
+        # and re-raise. Both ops are idempotent, so re-running the same command
+        # safely finishes the job.
+        backup.append_audit(
+            manifest=manifest,
+            summary=summary,
+            unlike=unlike,
+            remove_from_playlists=remove_from_playlists,
+        )
         print(
             f"\nInterrupted by {type(exc).__name__}. So far: unliked "
             f"{summary['unliked']}, removed {summary['removed_from_playlists']} "
@@ -105,6 +132,12 @@ def apply(
         )
         raise
 
+    backup.append_audit(
+        manifest=manifest,
+        summary=summary,
+        unlike=unlike,
+        remove_from_playlists=remove_from_playlists,
+    )
     print(
         f"\nDone. Unliked {summary['unliked']}, removed "
         f"{summary['removed_from_playlists']} playlist entries across "

@@ -8,6 +8,9 @@
 streaming_history/
 *.zip
 
+# restore manifests + audit log written before each apply (personal)
+backups/
+
 # python
 __pycache__/
 *.pyc
