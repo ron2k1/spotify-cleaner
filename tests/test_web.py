@@ -109,6 +109,55 @@ def test_apply_validation_rejects_empty_selection(client):
     assert r.status_code == 422
 
 
+def test_csv_export_unknown_job_is_404(client):
+    r = client.get("/api/scan/deadbeef/export.csv")
+    assert r.status_code == 404
+    assert r.json()["detail"] == "job_not_found"
+
+
+def test_csv_export_defangs_formula_injection(client):
+    """A track named like a spreadsheet formula must download as literal text."""
+    from spotify_cleaner.web.jobs import manager
+    from spotify_cleaner.web.routers.scan import _csv_safe
+
+    # Unit: risky leading chars get a single-quote guard; safe values pass through.
+    assert _csv_safe('=HYPERLINK("x")') == "'=HYPERLINK(\"x\")"
+    assert _csv_safe("+1") == "'+1"
+    assert _csv_safe("@SUM(1)") == "'@SUM(1)"
+    assert _csv_safe("Normal Song") == "Normal Song"
+    assert _csv_safe(None) == ""
+    assert _csv_safe(3) == "3"
+
+    # Integration: the same guard reaches the actual downloaded bytes.
+    job = manager.create("scan")
+    job.result = {
+        "rows": [
+            {
+                "name": "=2+5",
+                "artist_label": "@SUM(1)",
+                "reason": "never played (in export)",
+                "play_count": 0,
+                "last_played": None,
+                "confidence": "high",
+                "is_liked": True,
+                "playlist_count": 0,
+                "added_at": None,
+                "uri": "spotify:track:abc",
+            }
+        ],
+        "source": "gdpr",
+        "mode": "count",
+    }
+    job.emit("done", count=1)  # flips status to "done"
+
+    r = client.get(f"/api/scan/{job.id}/export.csv")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/csv")
+    body = r.text
+    assert body.splitlines()[0].startswith("name,artist_label,reason")
+    assert "'=2+5" in body and "'@SUM(1)" in body
+
+
 def test_gdpr_rejects_non_json(client):
     r = client.post(
         "/api/gdpr/upload",

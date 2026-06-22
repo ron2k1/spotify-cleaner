@@ -107,6 +107,17 @@ _CSV_COLS = [
     "uri",
 ]
 
+# A spreadsheet treats a cell starting with any of these as a formula, so a
+# track literally named ``=HYPERLINK("…")`` would execute on open. Track,
+# artist and (via playlist names) reason are all user-controlled free text.
+_CSV_FORMULA_LEAD = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe(value: object) -> str:
+    """Defang CSV formula injection (CWE-1236) by quoting risky leads."""
+    s = "" if value is None else str(value)
+    return "'" + s if s[:1] in _CSV_FORMULA_LEAD else s
+
 
 @router.get("/scan/{job_id}/export.csv")
 def scan_export(job_id: str) -> Response:
@@ -121,7 +132,7 @@ def scan_export(job_id: str) -> Response:
     writer = csv.writer(buf)
     writer.writerow(_CSV_COLS)
     for row in job.result["rows"]:
-        writer.writerow(["" if row.get(c) is None else row.get(c) for c in _CSV_COLS])
+        writer.writerow([_csv_safe(row.get(c)) for c in _CSV_COLS])
     return Response(
         content=buf.getvalue(),
         media_type="text/csv",
