@@ -29,6 +29,9 @@ def config() -> ConfigInfo:
         redirect_uri=os.getenv(
             "SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8888/callback"
         ),
+        # The username can come from the form, but the API key is server-only,
+        # so the UI can't know if Last.fm will work until we tell it here.
+        lastfm_available=bool(os.getenv("LASTFM_API_KEY")),
     )
 
 

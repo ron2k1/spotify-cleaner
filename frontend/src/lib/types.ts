@@ -4,6 +4,8 @@
 export interface ConfigInfo {
   configured: boolean;
   redirect_uri: string;
+  /** Is LASTFM_API_KEY set on the server? Gates the Last.fm source. */
+  lastfm_available: boolean;
 }
 
 export interface AuthStatus {

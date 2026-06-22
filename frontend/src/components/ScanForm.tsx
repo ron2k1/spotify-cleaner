@@ -31,6 +31,8 @@ export interface ScanFormValues {
 interface ScanFormProps {
   disabled: boolean;
   scanning: boolean;
+  /** When false, the Last.fm source is greyed out (no LASTFM_API_KEY on server). */
+  lastfmAvailable: boolean;
   onScan: (values: ScanFormValues) => void;
 }
 
@@ -52,7 +54,12 @@ function Labeled({
   );
 }
 
-export function ScanForm({ disabled, scanning, onScan }: ScanFormProps) {
+export function ScanForm({
+  disabled,
+  scanning,
+  lastfmAvailable,
+  onScan,
+}: ScanFormProps) {
   const [source, setSource] = useState<Source>("toptracks");
   const [allTracks, setAllTracks] = useState(false);
 
@@ -108,11 +115,23 @@ export function ScanForm({ disabled, scanning, onScan }: ScanFormProps) {
             <Database />
             GDPR export
           </ToggleGroupItem>
-          <ToggleGroupItem value="lastfm">
+          <ToggleGroupItem
+            value="lastfm"
+            disabled={!lastfmAvailable}
+            title={
+              lastfmAvailable ? undefined : "Set LASTFM_API_KEY on the server"
+            }
+          >
             <Radio />
             Last.fm
           </ToggleGroupItem>
         </ToggleGroup>
+        {!lastfmAvailable && (
+          <p className="-mt-3 text-xs text-muted-foreground">
+            Last.fm is greyed out until <code>LASTFM_API_KEY</code> is set on
+            the server.
+          </p>
+        )}
 
         {source === "toptracks" && (
           <div className="grid gap-4 sm:grid-cols-2">

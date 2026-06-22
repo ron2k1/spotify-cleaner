@@ -83,7 +83,13 @@ export default function App() {
     api
       .getConfig()
       .then(setConfig)
-      .catch(() => setConfig({ configured: false, redirect_uri: "" }));
+      .catch(() =>
+        setConfig({
+          configured: false,
+          redirect_uri: "",
+          lastfm_available: false,
+        }),
+      );
     refreshProfiles();
 
     const params = new URLSearchParams(window.location.search);
@@ -275,6 +281,7 @@ export default function App() {
           <ScanForm
             disabled={!auth?.connected || scanning}
             scanning={scanning}
+            lastfmAvailable={config?.lastfm_available ?? false}
             onScan={handleScan}
           />
 

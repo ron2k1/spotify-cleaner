@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 class ConfigInfo(BaseModel):
     configured: bool  # are SPOTIFY_CLIENT_ID/_SECRET set?
     redirect_uri: str  # echo it so the UI can show "register this exact URI"
+    lastfm_available: bool = False  # is LASTFM_API_KEY set? gates the source picker
 
 
 class AuthStatus(BaseModel):
