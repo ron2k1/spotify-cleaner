@@ -60,6 +60,35 @@ spotify-cleaner --source gdpr --gdpr-dir ./streaming_history --min-plays 1 \
 Useful flags: `--all-tracks` (consider playlist tracks too, not just Liked
 Songs), `--limit N` (how many to print), `--time-range short_term|medium_term|long_term`.
 
+## Web app (a local UI)
+
+Prefer clicking to typing? There's a small local web UI that does everything
+the CLI does — pick a source, scan, eyeball the candidates in a sortable table,
+select what to drop, and apply behind the same typed-`DELETE` guard. It can also
+take a GDPR export by drag-and-drop instead of `--gdpr-dir`.
+
+It runs entirely on your machine, on the **same origin as the OAuth redirect**
+(`127.0.0.1:8888`). Your token never leaves localhost, the browser never sees
+your client secret, and there's no CORS to configure.
+
+Build the UI once, then start the server:
+
+```bash
+cd frontend
+npm install
+npm run build          # bundles into src/spotify_cleaner/web/static/
+cd ..
+pip install -e ".[web]"
+python -m spotify_cleaner.web   # opens http://127.0.0.1:8888
+```
+
+For UI work, run `npm run dev` instead (Vite on `:5173`, proxying the API to
+`:8888`) so changes hot-reload without a rebuild.
+
+Album thumbnails are best-effort: some Spotify apps can't read the catalog
+`/v1/tracks` endpoint, and those rows just show a placeholder icon. The scan,
+scoring, and removal are unaffected — art is the only thing that degrades.
+
 ## Cleaning up for a friend (even a non-technical one)
 
 Your friends do **not** need their own "API key." A Client ID/Secret identifies
