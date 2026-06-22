@@ -384,6 +384,10 @@ export function CandidateTable({
               result.count === 0 && "pointer-events-none opacity-50",
             )}
             aria-disabled={result.count === 0}
+            // pointer-events-none only blocks the mouse; without this a keyboard
+            // user could still Tab to and trigger the "disabled" link, so the
+            // aria-disabled state would be a lie. -1 removes it from tab order.
+            tabIndex={result.count === 0 ? -1 : undefined}
           >
             <Download />
             CSV
