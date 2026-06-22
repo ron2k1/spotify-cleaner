@@ -11,9 +11,15 @@ from __future__ import annotations
 import json
 
 import pytest
-from fastapi.testclient import TestClient
 
-from spotify_cleaner.web.app import create_app
+# The web stack is an optional extra; skip these tests entirely when it isn't
+# installed (e.g. a core-only `pip install -e ".[dev]"`) instead of failing at
+# collection. CI installs ".[dev,web]", so they always run there.
+pytest.importorskip("fastapi")
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+from spotify_cleaner.web.app import create_app  # noqa: E402
 
 
 @pytest.fixture
