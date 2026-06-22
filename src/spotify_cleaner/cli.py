@@ -92,6 +92,12 @@ def _parse_args(argv):
         help="count mode: also flag tracks not played in this many days",
     )
     p.add_argument(
+        "--grace-days",
+        type=_positive_int,
+        default=None,
+        help="never flag tracks added within this many days (too new to judge)",
+    )
+    p.add_argument(
         "--all-tracks",
         action="store_true",
         help="consider all library/playlist tracks, not just Liked Songs",
@@ -163,6 +169,7 @@ def main(argv: Optional[list[str]] = None) -> None:
         liked_only=not args.all_tracks,
         min_plays=args.min_plays,
         stale_days=args.stale_days,
+        grace_days=args.grace_days,
     )
     cleaner.preview(candidates, limit=args.limit)
 

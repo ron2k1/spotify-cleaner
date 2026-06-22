@@ -16,6 +16,15 @@ from typing import Callable, Optional
 # so every call collapses to a no-op and the command-line path is unchanged.
 ProgressFn = Callable[[str, int, Optional[int]], None]
 
+# How much to trust a scorer's verdict for a single track. It is a property of
+# the *evidence*, not the planner: a true lifetime count (gdpr, matched by id)
+# is "high"; a crude top-50-vs-not proxy is "low". The UI surfaces this so a
+# user can be more careful before removing a low-confidence flag.
+Confidence = str  # one of the constants below
+HIGH = "high"
+MEDIUM = "medium"
+LOW = "low"
+
 
 @dataclass(frozen=True)
 class Track:
@@ -50,6 +59,10 @@ class PlayStats:
     in_top: Optional[bool] = None
     rank: Optional[int] = None
     note: str = ""
+    # How trustworthy this verdict is. Set by the scorer from the quality of the
+    # underlying evidence (data source + how the track was matched), so the UI
+    # can warn before acting on a weak signal. Defaults to MEDIUM.
+    confidence: Confidence = MEDIUM
 
 
 @dataclass

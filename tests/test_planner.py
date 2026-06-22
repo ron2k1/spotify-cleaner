@@ -10,9 +10,10 @@ import json
 from datetime import datetime, timedelta, timezone
 
 from spotify_cleaner.library import Library
-from spotify_cleaner.models import PlayStats, Track
+from spotify_cleaner.models import HIGH, LOW, MEDIUM, PlayStats, Track
 from spotify_cleaner.planner import plan
 from spotify_cleaner.scoring.gdpr import GdprScorer
+from spotify_cleaner.scoring.toptracks import TopTracksScorer
 
 
 def _lib(tracks: list[Track]) -> Library:
@@ -195,3 +196,87 @@ def test_gdpr_never_played_track(tmp_path):
     a = Track("a", "spotify:track:a", "A", ("X",), is_liked=True)
     stats = GdprScorer(str(tmp_path)).score([a])
     assert stats["a"].play_count == 0 and "never played" in stats["a"].note
+
+
+# --- grace-days (protect recently added tracks) -----------------------------
+
+
+def _added(tid: str, days_ago: int) -> Track:
+    when = (datetime.now(timezone.utc) - timedelta(days=days_ago)).isoformat()
+    return Track(tid, f"spotify:track:{tid}", tid, ("B",), is_liked=True, added_at=when)
+
+
+def test_grace_days_protects_recently_added():
+    # A 0-play track added 5 days ago would normally be flagged, but a 30-day
+    # grace window says "too new to judge" -> not a candidate.
+    t = _added("a", days_ago=5)
+    stats = {"a": PlayStats("gdpr", play_count=0)}
+    assert plan(_lib([t]), stats, "count", min_plays=2, grace_days=30) == []
+    # Shrink the window below the track's age and it is flagged again.
+    assert len(plan(_lib([t]), stats, "count", min_plays=2, grace_days=3)) == 1
+
+
+def test_grace_days_missing_added_at_is_not_protected():
+    # No added_at -> unknown age. Grace only ever *subtracts* a flag on positive
+    # evidence of newness, so a date-less track behaves as if grace were off.
+    t = Track("a", "spotify:track:a", "A", ("B",), is_liked=True, added_at=None)
+    stats = {"a": PlayStats("gdpr", play_count=0)}
+    assert len(plan(_lib([t]), stats, "count", min_plays=2, grace_days=30)) == 1
+
+
+# --- confidence (per-source trust signal on PlayStats) ----------------------
+
+
+class _FakeSp:
+    """Minimal stand-in for spotipy: only the top-tracks call TopTracksScorer uses."""
+
+    def __init__(self, top_ids: list[str]):
+        self._top = top_ids
+
+    def current_user_top_tracks(self, limit, offset, time_range):
+        return {"items": [{"id": tid} for tid in self._top[offset : offset + limit]]}
+
+
+def test_toptracks_confidence_is_always_low():
+    # "top vs not" can't tell #51 from never-played, so every verdict is LOW.
+    stats = TopTracksScorer(_FakeSp(["a"])).score([_t("a"), _t("b")])
+    assert stats["a"].confidence == LOW and stats["b"].confidence == LOW
+
+
+def test_gdpr_confidence_high_for_id_match(tmp_path):
+    rows = [{"ts": "2024-01-01T10:00:00Z", "ms_played": 200000,
+             "spotify_track_uri": "spotify:track:a",
+             "master_metadata_track_name": "A", "master_metadata_album_artist_name": "X"}]
+    (tmp_path / "h.json").write_text(json.dumps(rows), encoding="utf-8")
+    stats = GdprScorer(str(tmp_path)).score([_t("a", "A", "X")])
+    assert stats["a"].confidence == HIGH
+
+
+def test_gdpr_confidence_medium_for_name_fallback(tmp_path):
+    # legacy row, id unknown to the export -> matched only by artist/title.
+    rows = [{"endTime": "2020-01-09 15:15", "msPlayed": 200000,
+             "trackName": "Song", "artistName": "Band"}]
+    (tmp_path / "h.json").write_text(json.dumps(rows), encoding="utf-8")
+    stats = GdprScorer(str(tmp_path)).score([_t("unknown-id", "Song", "Band")])
+    assert stats["unknown-id"].play_count == 1
+    assert stats["unknown-id"].confidence == MEDIUM
+
+
+def test_gdpr_confidence_high_for_never_played_when_ids_present(tmp_path):
+    # A modern export populates the id index, so id-absence is real proof.
+    rows = [{"ts": "2024-01-01T10:00:00Z", "ms_played": 200000,
+             "spotify_track_uri": "spotify:track:other",
+             "master_metadata_track_name": "Other", "master_metadata_album_artist_name": "Z"}]
+    (tmp_path / "h.json").write_text(json.dumps(rows), encoding="utf-8")
+    stats = GdprScorer(str(tmp_path)).score([_t("a", "A", "X")])
+    assert stats["a"].play_count == 0 and stats["a"].confidence == HIGH
+
+
+def test_gdpr_confidence_medium_for_never_played_when_legacy(tmp_path):
+    # A legacy export carries no URIs, so by_id is empty and a "never played"
+    # verdict can't be trusted -> MEDIUM.
+    rows = [{"endTime": "2020-01-09 15:15", "msPlayed": 200000,
+             "trackName": "Other", "artistName": "Z"}]
+    (tmp_path / "h.json").write_text(json.dumps(rows), encoding="utf-8")
+    stats = GdprScorer(str(tmp_path)).score([_t("a", "A", "X")])
+    assert stats["a"].play_count == 0 and stats["a"].confidence == MEDIUM

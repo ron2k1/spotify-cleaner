@@ -36,13 +36,18 @@ interface CandidateTableProps {
 }
 
 function TrackCell({ row }: { row: TrackRow }) {
+  // album_art_url always points at the lazy /api/art proxy, which 404s for any
+  // track Spotify has no oEmbed thumbnail for. Swap to the placeholder on that
+  // error rather than show a broken-image icon.
+  const [artFailed, setArtFailed] = useState(false);
   return (
     <div className="flex min-w-0 items-center gap-3">
-      {row.album_art_url ? (
+      {row.album_art_url && !artFailed ? (
         <img
           src={row.album_art_url}
           alt=""
           loading="lazy"
+          onError={() => setArtFailed(true)}
           className="size-10 shrink-0 rounded object-cover"
         />
       ) : (

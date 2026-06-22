@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any, AsyncIterator, Optional
 from .. import cleaner
 from ..library import build_library
 from ..planner import plan
-from .serialize import enrich_album_art, track_row
+from .serialize import track_row
 
 if TYPE_CHECKING:
     import spotipy
@@ -107,8 +107,9 @@ def run_scan(
     all_tracks: bool,
     min_plays: int,
     stale_days: Optional[int],
+    grace_days: Optional[int] = None,
 ) -> None:
-    """Read -> score -> plan -> enrich. Same pipeline as cli.main, observable."""
+    """Read -> score -> plan -> serialize. Same pipeline as cli.main, observable."""
     try:
         prog = _progress(job)
         job.emit(
@@ -142,13 +143,10 @@ def run_scan(
             liked_only=not all_tracks,
             min_plays=min_plays,
             stale_days=stale_days,
+            grace_days=grace_days,
         )
 
-        job.emit("phase", phase="enriching", message="Fetching album art…")
-        art = enrich_album_art(
-            sp, [c.track.track_id for c in candidates], progress=prog
-        )
-        rows = [track_row(c, art) for c in candidates]
+        rows = [track_row(c) for c in candidates]
 
         job.result = {
             "library": library,

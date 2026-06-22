@@ -55,6 +55,7 @@ def start_scan(req: ScanRequest) -> JobStarted:
             all_tracks=req.all_tracks,
             min_plays=req.min_plays,
             stale_days=req.stale_days,
+            grace_days=req.grace_days,
         ),
         daemon=True,
     ).start()

@@ -35,6 +35,7 @@ class ScanRequest(BaseModel):
     all_tracks: bool = False
     min_plays: int = Field(2, ge=0)
     stale_days: Optional[int] = Field(None, ge=1)
+    grace_days: Optional[int] = Field(None, ge=1)  # protect tracks added recently
     time_range: Literal["short_term", "medium_term", "long_term"] = "long_term"
     top_n: int = Field(50, ge=1, le=50)
     min_ms: int = Field(30_000, ge=0)

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ..models import PlayStats, Track
+from ..models import LOW, PlayStats, Track
 
 if TYPE_CHECKING:
     import spotipy
@@ -52,6 +52,12 @@ class TopTracksScorer:
             in_top = r is not None
             note = f"top #{r} ({self.time_range})" if in_top else "not in top tracks"
             out[t.track_id] = PlayStats(
-                source=self.name, in_top=in_top, rank=r, note=note
+                source=self.name,
+                in_top=in_top,
+                rank=r,
+                note=note,
+                # "Not in your top 50" is a coarse signal: a track ranked #51
+                # looks identical to one you've never played. Always LOW.
+                confidence=LOW,
             )
         return out

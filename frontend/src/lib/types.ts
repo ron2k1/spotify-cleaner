@@ -47,11 +47,14 @@ export interface TrackRow {
   in_top: boolean | null;
   rank: number | null;
   note: string | null;
+  /** How much to trust the verdict: "high" | "medium" | "low" (per source). */
+  confidence: string;
   is_liked: boolean;
   playlist_ids: string[];
   playlist_count: number;
   added_at: string | null;
-  album_art_url: string | null;
+  /** Same-origin lazy art proxy (/api/art/{id}); 404s fall back to a placeholder. */
+  album_art_url: string;
 }
 
 export interface ScanResult {

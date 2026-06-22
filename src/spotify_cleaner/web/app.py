@@ -19,7 +19,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .oauth import NotConfigured
-from .routers import apply, auth, gdpr, scan, system
+from .routers import apply, art, auth, gdpr, scan, system
 
 _STATIC_DIR = Path(__file__).parent / "static"
 
@@ -68,6 +68,7 @@ def create_app() -> FastAPI:
     app.include_router(scan.router)
     app.include_router(apply.router)
     app.include_router(gdpr.router)
+    app.include_router(art.router)
 
     if (_STATIC_DIR / "index.html").exists():
         # html=True makes "/" serve index.html and 404s fall back to it (SPA).
