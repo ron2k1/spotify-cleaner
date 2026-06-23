@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from ..models import PlayStats, Track
+from ..models import HIGH, MEDIUM, PlayStats, ProgressFn, Track
 
 MIN_MS = 30_000  # a "real" play: at least 30s, matching common scrobble rules
 _SEP = "␟"  # unlikely separator for the artist/title fallback key
@@ -76,7 +76,9 @@ class GdprScorer:
             if isinstance(data, list):
                 yield from data
 
-    def score(self, tracks: list[Track]) -> dict[str, PlayStats]:
+    def score(
+        self, tracks: list[Track], progress: Optional[ProgressFn] = None
+    ) -> dict[str, PlayStats]:
         # rec = [count, last_played]; two indexes so a row can be matched
         # by exact id, with an artist/title fallback for legacy rows.
         by_id: dict[str, list] = defaultdict(lambda: [0, None])
@@ -96,9 +98,15 @@ class GdprScorer:
                 if ts and (rec[1] is None or ts > rec[1]):
                     rec[1] = ts
 
+        # Modern exports carry a spotify_track_uri on every row, so the id index
+        # is authoritative; legacy exports have none, leaving only name matching.
+        # This decides whether a "never played" verdict can be trusted (below).
+        id_index_populated = bool(by_id)
+
         out: dict[str, PlayStats] = {}
         for t in tracks:
             rec = by_id.get(t.track_id)
+            matched_by_id = rec is not None
             if rec is None:  # fall back to artist/title for export rows lacking a URI
                 # The export's name key uses the *album* artist, but a track can
                 # list several performing artists. Try each so a collaboration
@@ -113,7 +121,30 @@ class GdprScorer:
                 note = f"{count} plays" + (f", last {last.date()}" if last else "")
             else:
                 note = "never played (in export)"
+            # Confidence is a property of *how the row was matched*, not the verdict:
+            #   * exact Spotify-id match -> HIGH (unambiguous play events)
+            #   * artist/title fallback  -> MEDIUM (a near-miss name may be a
+            #     different track entirely)
+            #   * never played -> HIGH only when the export actually carried ids,
+            #     so id-absence is real proof; a legacy name-only export cannot
+            #     prove a negative, so MEDIUM.
+            if matched_by_id:
+                confidence = HIGH
+            elif rec is not None:  # matched via the name fallback
+                confidence = MEDIUM
+            elif id_index_populated:  # genuinely never played, id index trustworthy
+                confidence = HIGH
+            else:
+                confidence = MEDIUM
             out[t.track_id] = PlayStats(
-                source=self.name, play_count=count, last_played=last, note=note
+                source=self.name,
+                play_count=count,
+                last_played=last,
+                note=note,
+                confidence=confidence,
             )
+        # The export is already parsed into the two indexes above; matching the
+        # library against them is fast, so a single completion tick is enough.
+        if progress is not None:
+            progress("scoring", len(tracks), len(tracks))
         return out

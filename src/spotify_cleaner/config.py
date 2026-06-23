@@ -4,6 +4,7 @@ it only wires credentials and constants."""
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 
 try:
@@ -28,6 +29,26 @@ SCOPES = " ".join(
 )
 
 
+_PROFILE_UNSAFE = re.compile(r"[^A-Za-z0-9_-]+")
+
+
+def _profile_cache_path(profile: str) -> str:
+    """Map a --profile name to its own token-cache filename.
+
+    One operator can hold several friends' logins at once, each in its own
+    cache, so they never clobber one another. The name lands inside a filename,
+    so collapse anything that isn't a safe identifier char to a dash. That also
+    neutralizes a traversal-looking value like "../foo" — it can never steer
+    the cache file outside the project directory.
+    """
+    safe = _PROFILE_UNSAFE.sub("-", profile.strip()).strip("-")
+    if not safe:
+        raise SystemExit(
+            "--profile must contain at least one letter, digit, dash, or underscore."
+        )
+    return f".cache-spotify-{safe}"
+
+
 @dataclass
 class SpotifyConfig:
     client_id: str
@@ -36,7 +57,7 @@ class SpotifyConfig:
     cache_path: str
 
     @classmethod
-    def from_env(cls) -> "SpotifyConfig":
+    def from_env(cls, profile: str | None = None) -> "SpotifyConfig":
         missing = [
             k
             for k in ("SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET")
@@ -48,6 +69,13 @@ class SpotifyConfig:
                 + ", ".join(missing)
                 + "\nCopy .env.example to .env and fill in your Spotify app credentials."
             )
+        # An explicit --profile wins over SPOTIFY_TOKEN_CACHE: it's a per-person
+        # choice made at the command line, so it must not be silently overridden
+        # by a single cache path left in the environment.
+        if profile:
+            cache_path = _profile_cache_path(profile)
+        else:
+            cache_path = os.getenv("SPOTIFY_TOKEN_CACHE", ".cache-spotify")
         return cls(
             client_id=os.environ["SPOTIFY_CLIENT_ID"],
             client_secret=os.environ["SPOTIFY_CLIENT_SECRET"],
@@ -55,21 +83,5 @@ class SpotifyConfig:
             redirect_uri=os.getenv(
                 "SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8888/callback"
             ),
-            cache_path=os.getenv("SPOTIFY_TOKEN_CACHE", ".cache-spotify"),
+            cache_path=cache_path,
         )
-
-
-@dataclass
-class LastfmConfig:
-    api_key: str
-    username: str
-
-    @classmethod
-    def from_env(cls) -> "LastfmConfig":
-        key = os.getenv("LASTFM_API_KEY")
-        user = os.getenv("LASTFM_USERNAME")
-        if not key or not user:
-            raise SystemExit(
-                "Last.fm source needs LASTFM_API_KEY and LASTFM_USERNAME set."
-            )
-        return cls(api_key=key, username=user)

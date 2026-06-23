@@ -26,10 +26,19 @@ Repository = "https://github.com/ron2k1/spotify-cleaner"
 Issues = "https://github.com/ron2k1/spotify-cleaner/issues"
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "httpx>=0.27"]
+web = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "sse-starlette>=2.1",
+    "python-multipart>=0.0.9",
+]
 
 [project.scripts]
 spotify-cleaner = "spotify_cleaner.cli:main"
+# Launches the local web UI (uvicorn on 127.0.0.1:8888). Needs the [web] extra:
+#   pipx install "spotify-cleaner[web]"  ->  spotify-cleaner-web
+spotify-cleaner-web = "spotify_cleaner.web.__main__:main"
 
 [build-system]
 requires = ["setuptools>=68"]

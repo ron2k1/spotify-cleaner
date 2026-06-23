@@ -9,7 +9,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ..models import PlayStats, Track
+from typing import Optional
+
+from ..models import LOW, PlayStats, ProgressFn, Track
 
 if TYPE_CHECKING:
     import spotipy
@@ -44,7 +46,9 @@ class TopTracksScorer:
             offset += len(items)
         return ranks
 
-    def score(self, tracks: list[Track]) -> dict[str, PlayStats]:
+    def score(
+        self, tracks: list[Track], progress: Optional[ProgressFn] = None
+    ) -> dict[str, PlayStats]:
         ranks = self._top_ranks()
         out: dict[str, PlayStats] = {}
         for t in tracks:
@@ -52,6 +56,16 @@ class TopTracksScorer:
             in_top = r is not None
             note = f"top #{r} ({self.time_range})" if in_top else "not in top tracks"
             out[t.track_id] = PlayStats(
-                source=self.name, in_top=in_top, rank=r, note=note
+                source=self.name,
+                in_top=in_top,
+                rank=r,
+                note=note,
+                # "Not in your top 50" is a coarse signal: a track ranked #51
+                # looks identical to one you've never played. Always LOW.
+                confidence=LOW,
             )
+        # Scoring is a single in-memory pass over already-fetched ranks, so just
+        # tick to 100% rather than emit per track.
+        if progress is not None:
+            progress("scoring", len(tracks), len(tracks))
         return out

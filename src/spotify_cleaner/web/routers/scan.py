@@ -1,0 +1,122 @@
+"""Start a scan, stream its progress, fetch its candidate rows.
+
+A scan always needs a connected Spotify client -- even ``gdpr``, because the
+*library* (which tracks are liked / in which playlists) only comes from
+Spotify. The source only changes how those tracks are *scored*.
+"""
+
+from __future__ import annotations
+
+import csv
+import io
+import threading
+
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import Response
+from sse_starlette.sse import EventSourceResponse
+
+from ...csvsafe import csv_safe as _csv_safe
+from ...scoring.gdpr import GdprScorer
+from ...scoring.toptracks import TopTracksScorer
+from .. import oauth
+from ..jobs import manager, run_scan, sse_events
+from ..schemas import JobStarted, ScanRequest
+from .gdpr import resolve_gdpr
+
+router = APIRouter(prefix="/api", tags=["scan"])
+
+
+def _build_scorer(req: ScanRequest, sp):
+    if req.source == "gdpr":
+        return GdprScorer(str(resolve_gdpr(req.gdpr_token)), min_ms=req.min_ms)
+    return TopTracksScorer(sp, time_range=req.time_range, top_n=req.top_n)
+
+
+@router.post("/scan", response_model=JobStarted)
+def start_scan(req: ScanRequest) -> JobStarted:
+    cfg = oauth.load_config(req.profile)  # NotConfigured -> 503
+    sp = oauth.client_for(cfg)
+    if sp is None:
+        raise HTTPException(status_code=401, detail="not_connected")
+    scorer = _build_scorer(req, sp)
+
+    job = manager.create("scan")
+    threading.Thread(
+        target=run_scan,
+        args=(job, sp, scorer),
+        kwargs=dict(
+            min_plays=req.min_plays,
+            stale_days=req.stale_days,
+            grace_days=req.grace_days,
+        ),
+        daemon=True,
+    ).start()
+    return JobStarted(job_id=job.id)
+
+
+@router.get("/scan/{job_id}/events")
+async def scan_events(job_id: str, request: Request) -> EventSourceResponse:
+    job = manager.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="job_not_found")
+    last = int(request.headers.get("last-event-id") or 0)
+    return EventSourceResponse(sse_events(job, request, last))
+
+
+@router.get("/scan/{job_id}/result")
+def scan_result(job_id: str) -> dict:
+    job = manager.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="job_not_found")
+    if job.status == "error":
+        raise HTTPException(status_code=500, detail=job.error or "scan_failed")
+    if job.status != "done" or not job.result:
+        raise HTTPException(status_code=409, detail="scan_not_ready")
+    r = job.result
+    return {
+        "count": len(r["rows"]),
+        "source": r["source"],
+        "mode": r["mode"],
+        "rows": r["rows"],
+    }
+
+
+# Columns chosen for a human reviewing in a spreadsheet, plus uri so the export
+# doubles as a re-import/restore reference.
+_CSV_COLS = [
+    "name",
+    "artist_label",
+    "reason",
+    "play_count",
+    "last_played",
+    "confidence",
+    "is_liked",
+    "playlist_count",
+    "added_at",
+    "uri",
+]
+
+
+@router.get("/scan/{job_id}/export.csv")
+def scan_export(job_id: str) -> Response:
+    """Download the scan's candidates as CSV, for review before applying."""
+    job = manager.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="job_not_found")
+    if job.status != "done" or not job.result:
+        raise HTTPException(status_code=409, detail="scan_not_ready")
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(_CSV_COLS)
+    for row in job.result["rows"]:
+        writer.writerow([_csv_safe(row.get(c)) for c in _CSV_COLS])
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="spotify-cleaner-{job_id[:8]}.csv"'
+            )
+        },
+    )

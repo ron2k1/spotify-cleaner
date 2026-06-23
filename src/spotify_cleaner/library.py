@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Iterator, Optional
 
-from .models import Track
+from .models import ProgressFn, Track
 
 if TYPE_CHECKING:  # type-checker only; never imported at runtime
     import spotipy
@@ -66,9 +66,13 @@ def _paginate(sp: "spotipy.Spotify", page: dict) -> Iterator[dict]:
         current = sp.next(current) if current.get("next") else None
 
 
-def fetch_liked(sp: "spotipy.Spotify") -> dict[str, Track]:
+def fetch_liked(
+    sp: "spotipy.Spotify", progress: Optional[ProgressFn] = None
+) -> dict[str, Track]:
     out: dict[str, Track] = {}
     first = sp.current_user_saved_tracks(limit=50)
+    # The first page carries the library total, so progress can show a fraction.
+    total = first.get("total") if isinstance(first, dict) else None
     for item in _paginate(sp, first):
         tr = item.get("track") or {}
         tid = tr.get("id")
@@ -82,6 +86,12 @@ def fetch_liked(sp: "spotipy.Spotify") -> dict[str, Track]:
             added_at=item.get("added_at"),
             is_liked=True,
         )
+        # Emit once per page (50), not per track, so a huge library can't flood
+        # the event queue faster than a client can drain it.
+        if progress is not None and len(out) % 50 == 0:
+            progress("reading_liked", len(out), total)
+    if progress is not None:
+        progress("reading_liked", len(out), total)
     return out
 
 
@@ -112,19 +122,32 @@ def _iter_playlist_items(sp: "spotipy.Spotify", playlist_id: str) -> Iterator[di
         playlist_id,
         limit=50,  # the read endpoint caps at 50/page (write/delete caps at 100)
         additional_types=("track",),
-        fields="items(track(id,uri,name,artists(name))),next",
+        # Spotify returns each row's media object under "item" (it was "track"
+        # before a 2025 API change). Project BOTH keys so the fields filter
+        # survives either shape -- requesting an absent key is simply ignored.
+        fields=(
+            "items(item(id,uri,name,artists(name)),"
+            "track(id,uri,name,artists(name))),next"
+        ),
     )
     yield from _paginate(sp, first)
 
 
-def build_library(sp: "spotipy.Spotify", owned_only: bool = True) -> Library:
+def build_library(
+    sp: "spotipy.Spotify",
+    owned_only: bool = True,
+    progress: Optional[ProgressFn] = None,
+) -> Library:
     me_id = sp.me()["id"]
-    tracks = fetch_liked(sp)
+    tracks = fetch_liked(sp, progress=progress)
     playlists = fetch_playlists(sp, owned_only, me_id)
 
-    for pl in playlists.values():
+    total_pl = len(playlists)
+    for idx, pl in enumerate(playlists.values(), 1):
         for item in _iter_playlist_items(sp, pl.playlist_id):
-            tr = item.get("track") or {}
+            # Spotify moved the playlist row's media object from "track" to
+            # "item"; read whichever key this API version returns.
+            tr = item.get("item") or item.get("track") or {}
             uri = tr.get("uri")
             if not uri:
                 continue
@@ -147,5 +170,9 @@ def build_library(sp: "spotipy.Spotify", owned_only: bool = True) -> Library:
                 tracks[tid] = replace(
                     existing, playlist_ids=existing.playlist_ids | {pl.playlist_id}
                 )
+        # One event per playlist finished: naturally throttled and gives an
+        # honest fraction (idx of total_pl) for a progress bar.
+        if progress is not None:
+            progress("reading_playlists", idx, total_pl)
 
     return Library(tracks=tracks, playlists=playlists)
