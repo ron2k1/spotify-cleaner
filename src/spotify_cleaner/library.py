@@ -122,7 +122,13 @@ def _iter_playlist_items(sp: "spotipy.Spotify", playlist_id: str) -> Iterator[di
         playlist_id,
         limit=50,  # the read endpoint caps at 50/page (write/delete caps at 100)
         additional_types=("track",),
-        fields="items(track(id,uri,name,artists(name))),next",
+        # Spotify returns each row's media object under "item" (it was "track"
+        # before a 2025 API change). Project BOTH keys so the fields filter
+        # survives either shape -- requesting an absent key is simply ignored.
+        fields=(
+            "items(item(id,uri,name,artists(name)),"
+            "track(id,uri,name,artists(name))),next"
+        ),
     )
     yield from _paginate(sp, first)
 
@@ -139,7 +145,9 @@ def build_library(
     total_pl = len(playlists)
     for idx, pl in enumerate(playlists.values(), 1):
         for item in _iter_playlist_items(sp, pl.playlist_id):
-            tr = item.get("track") or {}
+            # Spotify moved the playlist row's media object from "track" to
+            # "item"; read whichever key this API version returns.
+            tr = item.get("item") or item.get("track") or {}
             uri = tr.get("uri")
             if not uri:
                 continue
