@@ -1,19 +1,19 @@
 <!-- Banner is a generated asset (docs/banner.png), rendered at 2x for retina displays. -->
 <p align="center">
   <a href="https://github.com/ron2k1/spotify-cleaner">
-    <img src="docs/banner.png" alt="spotify-cleaner — find the songs you never play and safely clear them out" width="880">
+    <img src="docs/banner.png" alt="spotify-cleaner: find the songs you never play and safely clear them out" width="880">
   </a>
 </p>
 
 <p align="center">
   <a href="https://github.com/ron2k1/spotify-cleaner/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-2ea44f.svg"></a>
   <a href="https://github.com/ron2k1/spotify-cleaner/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/ron2k1/spotify-cleaner/ci.yml?branch=main&label=CI"></a>
-  <a href="https://github.com/ron2k1/spotify-cleaner/blob/main/pyproject.toml"><img alt="Python 3.10–3.13" src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg"></a>
+  <a href="https://github.com/ron2k1/spotify-cleaner/blob/main/pyproject.toml"><img alt="Python 3.10-3.13" src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg"></a>
   <a href="https://github.com/ron2k1/spotify-cleaner/blob/main/CONTRIBUTING.md"><img alt="PRs welcome" src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg"></a>
 </p>
 
 Find the songs you barely listen to and clear them out of your Liked Songs and
-playlists — from a **CLI** or a small **local web UI**, with a hard dry-run
+playlists. Works from a **CLI** or a small **local web UI**, with a hard dry-run
 default so nothing leaves your library by accident.
 
 Anyone can run this: you create your own free Spotify app (one dashboard click),
@@ -24,7 +24,7 @@ this project, ever sees it.
 <p align="center">
   <img src="docs/screenshots/01-candidates-table.png" alt="The web UI showing least-listened candidates in a sortable table" width="860">
 </p>
-<p align="center"><sub>The local web UI: every candidate in a sortable, filterable table — review, then remove behind a typed-<code>DELETE</code> guard.</sub></p>
+<p align="center"><sub>The local web UI: every candidate in a sortable, filterable table. Review, then remove behind a typed-<code>DELETE</code> guard.</sub></p>
 
 ## Contents
 
@@ -52,16 +52,16 @@ two sources, and you pick which one:
 | `gdpr`       | Yes (lifetime + dates) | request your data export, wait a bit    | the real, accurate cleanup |
 
 The reading and removing machinery is identical for both. Only the
-score source differs — that is the `Scorer` strategy you select.
+score source differs. That is the `Scorer` strategy you select.
 
 ## Highlights
 
-- 🔒 **Local and private** — talks only to your account; your token never leaves your machine.
-- 🧹 **Two ways to measure "least listened"** — zero-setup `toptracks`, or true lifetime counts from your `gdpr` export.
-- 🖥️ **CLI *and* a local web UI** — same engine, same safety, pick whichever you prefer.
-- 🛟 **Dry-run by default** — a real delete needs `--apply` *and* typing `DELETE`.
-- ♻️ **Idempotent and resumable** — interrupted mid-run? Re-run the exact command; already-removed tracks are skipped.
-- 🧪 **Pure logic, unit-tested** — the planner and GDPR parser are tested without ever touching an account.
+- 🔒 **Local and private.** Talks only to your account; your token never leaves your machine.
+- 🧹 **Two ways to measure "least listened".** Zero-setup `toptracks`, or true lifetime counts from your `gdpr` export.
+- 🖥️ **CLI *and* a local web UI.** Same engine, same safety, pick whichever you prefer.
+- 🛟 **Dry-run by default.** A real delete needs `--apply` *and* typing `DELETE`.
+- ♻️ **Idempotent and resumable.** Interrupted mid-run? Re-run the exact command; already-removed tracks are skipped.
+- 🧪 **Pure logic, unit-tested.** The planner and GDPR parser are tested without ever touching an account.
 
 ## Install
 
@@ -79,7 +79,7 @@ must be Premium (a 2026 dev-mode requirement).
 
 ## Use
 
-Everything is a **dry run by default** — it only prints candidates. Nothing is
+Everything is a **dry run by default**: it only prints candidates. Nothing is
 deleted unless you pass `--apply` *and* type `DELETE` at the prompt.
 
 ```bash
@@ -94,14 +94,14 @@ spotify-cleaner --source gdpr --gdpr-dir ./streaming_history --min-plays 1 \
     --apply --unlike --remove-from-playlists
 ```
 
-Every scan covers your whole library — Liked Songs **and** every playlist you
+Every scan covers your whole library: Liked Songs **and** every playlist you
 own. Useful flags: `--limit N` (how many to print), `--time-range
 short_term|medium_term|long_term`.
 
 ## Web app (a local UI)
 
 Prefer clicking to typing? There's a small local web UI that does everything
-the CLI does — pick a source, scan, eyeball the candidates in a sortable table,
+the CLI does: pick a source, scan, eyeball the candidates in a sortable table,
 select what to drop, and apply behind the same typed-`DELETE` guard. It can also
 take a GDPR export by drag-and-drop instead of `--gdpr-dir`.
 
@@ -123,11 +123,11 @@ your client secret, and there's no CORS to configure.
   <tr>
     <td width="50%" valign="top">
       <img src="docs/screenshots/04-gdpr-dropzone.png" alt="GDPR export drop zone">
-      <br><sub><b>GDPR mode.</b> Drop your export folder or zip — no <code>--gdpr-dir</code> needed — and set the play/staleness cutoffs.</sub>
+      <br><sub><b>GDPR mode.</b> Drop your export folder or zip (no <code>--gdpr-dir</code> needed) and set the play/staleness cutoffs.</sub>
     </td>
     <td width="50%" valign="top">
       <img src="docs/screenshots/05-delete-confirm.png" alt="Typed-DELETE confirmation dialog">
-      <br><sub><b>3. The guard.</b> Choose what to remove, type <code>DELETE</code> — nothing happens until you do.</sub>
+      <br><sub><b>3. The guard.</b> Choose what to remove, type <code>DELETE</code>. Nothing happens until you do.</sub>
     </td>
   </tr>
 </table>
@@ -160,7 +160,7 @@ for fall back to a placeholder icon, and nothing else is affected.
 The CLI and the web UI are two front-ends over one shared core. Both authorize
 with Spotify, read your whole library, score it through a pluggable strategy,
 and remove tracks behind the same guards. **The only thing that differs between
-`toptracks` and `gdpr` is the scorer** — everything downstream is identical.
+`toptracks` and `gdpr` is the scorer**. Everything downstream is identical.
 
 ```mermaid
 flowchart TD
@@ -203,17 +203,17 @@ flowchart TD
 | Stage | Module | What it does |
 | --- | --- | --- |
 | **Auth** | `auth.make_client` · `web.oauth` | Spotify OAuth; the token is cached locally (`.cache-spotify`), one cache per `--profile`. |
-| **Read** | `library.build_library` | Reads your whole library — Liked Songs + every playlist **you own**. |
-| **Score** | `scoring/` (`base`, `toptracks`, `gdpr`) | The pluggable `Scorer` strategy — the only piece that changes between sources. |
+| **Read** | `library.build_library` | Reads your whole library: Liked Songs + every playlist **you own**. |
+| **Score** | `scoring/` (`base`, `toptracks`, `gdpr`) | The pluggable `Scorer` strategy, the only piece that changes between sources. |
 | **Plan** | `planner.plan` | Pure, fully-tested candidacy logic; least-listened first. Never touches the network. |
 | **Clean** | `cleaner.apply` | Guarded, idempotent, batched removals. Dry-run unless `--apply`. |
 | **Backup** | `backup.write_backup` | Records a manifest of everything it touches. |
 
 **The `Scorer` strategy.** A scorer is a tiny `Protocol` (`scoring/base.py`): a
-`name`, a `mode` (`count` or `rank`), and one method — `score(tracks)` returning
+`name`, a `mode` (`count` or `rank`), and one method: `score(tracks)` returning
 `{track_id: PlayStats}`. Adding a new "least-listened" signal means writing one
 class and registering it in `cli._build_scorer`. The planner only ever sees
-`PlayStats`, so it never needs to know where the numbers came from — which is
+`PlayStats`, so it never needs to know where the numbers came from. That is
 exactly why the two sources share the whole read → plan → clean pipeline.
 
 **Web request flow.** The web UI is a same-origin SPA: the OAuth token is cached
@@ -242,7 +242,7 @@ sequenceDiagram
 ## Cleaning up for a friend (even a non-technical one)
 
 Your friends do **not** need their own "API key." A Client ID/Secret identifies
-the *app*, not the person — you make it once, and it's yours. A friend only ever
+the *app*, not the person. You make it once, and it's yours. A friend only ever
 **logs into their own Spotify and clicks Agree**, which lets your app see *their*
 library. Their token is the only per-person thing, and it stays on whichever
 machine they authorized from.
@@ -268,7 +268,7 @@ your machine. Two flags make that safe:
 spotify-cleaner --source toptracks --profile alice --no-browser
 ```
 
-The tool prints `Go to the following URL: …` — text that link to your friend.
+The tool prints `Go to the following URL: …`. Text that link to your friend.
 They open it (already logged into Spotify on their phone), tap **Agree**, and
 land on a `http://127.0.0.1:8888/callback?...` page that won't load. That's
 expected: they copy that URL from the address bar and send it back to you, you
@@ -305,7 +305,7 @@ It computes true lifetime play counts *and* last-played dates, so
 - Removed-from-playlist tracks are not deleted from Spotify; unliked tracks can
   be re-liked. Still: review the printed list before confirming.
 - Every operation is idempotent. If a run is interrupted (network drop, rate
-  limit), it prints how far it got — just re-run the exact same command to
+  limit), it prints how far it got. Just re-run the exact same command to
   finish. Already-removed tracks are skipped, so nothing is double-handled.
 
 ## Develop
