@@ -34,7 +34,7 @@ this project, ever sees it.
 - [Use (CLI)](#use)
 - [Web app (a local UI)](#web-app-a-local-ui)
 - [Architecture](#architecture)
-- [Cleaning up for a friend](#cleaning-up-for-a-friend-even-a-non-technical-one)
+- [Cleaning up for a friend](#cleaning-up-for-a-friend)
 - [Getting the GDPR export](#getting-the-gdpr-export-the-accurate-source)
 - [Safety](#safety)
 - [Develop](#develop)
@@ -239,7 +239,7 @@ sequenceDiagram
     S->>API: unlike / remove (batched, idempotent)
 ```
 
-## Cleaning up for a friend (even a non-technical one)
+## Cleaning up for a friend
 
 Your friends do **not** need their own "API key." A Client ID/Secret identifies
 the *app*, not the person. You make it once, and it's yours. A friend only ever
@@ -252,14 +252,8 @@ Spotify-account email under your app's **User Management** (in the dashboard) ca
 authorize it, up to **25 users**. "Me and my friends" fits inside that, so you
 never need Spotify's public-app approval. Add each friend's email there first.
 
-Then pick the path that matches the friend:
-
-**A technical friend** runs the tool themselves. Cleanest: they create their own
-free Spotify app (the same one-dashboard-click you did) so nothing is shared.
-Their login never leaves their machine.
-
-**A non-technical friend** can't install anything, so **you run it for them** on
-your machine. Two flags make that safe:
+Then **you run it for them** on your machine. Your friend installs nothing and
+needs no Spotify app of their own. Two flags make that safe:
 
 ```bash
 # Authorize the friend once. --profile gives them their own token file so it
